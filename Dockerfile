@@ -1,10 +1,8 @@
-# docker build -t flaskr .
-
-# start by pulling the python image
 FROM python:3.8-alpine
 
 # build tools
-RUN apk update && apk add python3-dev gcc libc-dev git
+RUN apk update && apk add python3-dev gcc libc-dev git tree
+
 RUN git clone https://github.com/nilswiersma/fantasy-ranking.git
 
 WORKDIR /fantasy-ranking
@@ -16,4 +14,5 @@ RUN pip install -e .
 
 EXPOSE 8080
 
+# ENTRYPOINT [ "waitress-serve", "--call", "flaskr:create_app" ]
 ENTRYPOINT [ "python", "main.py" ]

@@ -154,3 +154,16 @@ def refresh_live_events():
         x = random.randint(1,3000)/1000
         print(f'[DEBUG] Random sleep {x}s')
         time.sleep(x)
+
+def collect_numbers_from_draft_events():
+    with sqlite3.connect(DB) as con:
+        cur = con.cursor()
+        teams = cur.execute('''select event_id, league_id, team_id, player from points where event_id in (select id from events where state=="DraftEvent")''').fetchall()
+    
+    for team in teams:
+        data = get_single_team(team[0], team[1], team[2])
+        team_data = json.loads(data.text)
+        team_to_db(team_data, team[0], team[3])
+        x = random.randint(1,3000)/1000
+        print(f'[DEBUG] Random sleep {x}s')
+        time.sleep(x)

@@ -45,8 +45,8 @@ def create_app():
 
     @app.route("/grab_db", methods=('GET',))
     def grab_db():
-        with sqlite3.connect(DB) as _:
-            return send_file(DB, as_attachment=True)
+        with sqlite3.connect(DB) as _: # wait for it to be closed
+            return send_file('../' + DB, as_attachment=True)
 
     return app
 

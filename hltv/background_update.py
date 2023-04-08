@@ -7,6 +7,7 @@ REFRESH_INTERVAL = 10 * 60
 
 def update_overview():
     print('[DEBUG] updating overview on timer')
+    # Do live first to make sure to grab the last points update before it goes to finished
     refresh_live_events()
     refresh_overview()
 
