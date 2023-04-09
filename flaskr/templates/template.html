@@ -37,33 +37,33 @@
         {% for event, data in season_data.events.items() %}
         <tr style="border-top: 1px solid black">
             <th rowspan="3">
-                <a rel="noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/overview">{{ event[1] }}</a>
+                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/overview">{{ event[1] }}</a>
             </th>
             <th align="left">Points</th>
             {% if not data[0] %}
             <td rowspan="3" align="center">
                 {% if event[2] == 'DraftEvent' %}
-                    <a rel="noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/join">JOIN NOW!</a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/join">JOIN NOW!</a>
                 {% else %}
                     N/A
                 {% endif %}
             </td>
             {% else %}
                 <td align="right">
-                    <a rel="noreferrer" href="https://www.hltv.org/fantasy/{{ data[0][0] }}/league/{{ data[0][1] }}/team/{{ data[0][2] }}">{{ data[0][4] }}</a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ data[0][0] }}/league/{{ data[0][1] }}/team/{{ data[0][2] }}">{{ data[0][4] }}</a>
                 </td>
             {% endif %}
             {% if not data[1] %}
             <td rowspan="3" align="center">
                 {% if event[2] == 'DraftEvent' %}
-                    <a rel="noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/join">JOIN NOW!</a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/join">JOIN NOW!</a>
                 {% else %}
                     N/A
                 {% endif %}
             </td>
             {% else %}
                 <td align="right">
-                    <a rel="noreferrer" href="https://www.hltv.org/fantasy/{{ data[1][0] }}/league/{{ data[1][1] }}/team/{{ data[1][2] }}">{{ data[1][4] }}</a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ data[1][0] }}/league/{{ data[1][1] }}/team/{{ data[1][2] }}">{{ data[1][4] }}</a>
                 </td>
             {% endif %}
         </tr>

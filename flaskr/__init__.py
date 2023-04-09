@@ -8,7 +8,7 @@ def create_app():
     if not os.path.exists(DB):
         print('[DEBUG] creating db by copying base db')
         import shutil
-        shutil.copy(f'./data/{DB}', DB)
+        shutil.copy(DB_TEMPLATE, DB)
 
     app = Flask(__name__, instance_relative_config=True)
     

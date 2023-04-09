@@ -9,7 +9,8 @@ HLTV_FANTASY_OVERVIEW = 'https://www.hltv.org/fantasy/json'
 HLTV_FANTASY_SINGLE_TEAM = 'https://www.hltv.org/fantasy/{}/league/{}/overview/{}/json'
 HLTV_FANTASY_SINGLE_TEAM_RE = r'https://www.hltv.org/fantasy/(\d+)/league/(\d+)/team/(\d+)/*'
 
-DB = './points.sqlite'
+DB = './data/points.sqlite'
+DB_TEMPLATE = './flaskr/templates/points.sqlite'
 
 HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46'}
 
@@ -143,10 +144,12 @@ def refresh_overview():
     overview_to_db(overview)
 
 def refresh_live_events():
+    print(f'[DEBUG] {DB=}')
     with sqlite3.connect(DB) as con:
         cur = con.cursor()
         teams = cur.execute('''select event_id, league_id, team_id, player from points where event_id in (select id from events where state=="LiveEvent")''').fetchall()
     
+    print(f'[DEBUG] {teams=}')
     for team in teams:
         data = get_single_team(team[0], team[1], team[2])
         team_data = json.loads(data.text)
@@ -155,15 +158,14 @@ def refresh_live_events():
         print(f'[DEBUG] Random sleep {x}s')
         time.sleep(x)
 
-def collect_numbers_from_draft_events():
-    with sqlite3.connect(DB) as con:
-        cur = con.cursor()
-        teams = cur.execute('''select event_id, league_id, team_id, player from points where event_id in (select id from events where state=="DraftEvent")''').fetchall()
-    
-    for team in teams:
-        data = get_single_team(team[0], team[1], team[2])
-        team_data = json.loads(data.text)
-        team_to_db(team_data, team[0], team[3])
-        x = random.randint(1,3000)/1000
-        print(f'[DEBUG] Random sleep {x}s')
-        time.sleep(x)
+# def collect_numbers_from_draft_events():
+#     with sqlite3.connect(DB) as con:
+#         cur = con.cursor()
+#         teams = cur.execute('''select event_id, league_id, team_id, player from points where event_id in (select id from events where state=="DraftEvent")''').fetchall()
+#     for team in teams:
+#         data = get_single_team(team[0], team[1], team[2])
+#         team_data = json.loads(data.text)
+#         team_to_db(team_data, team[0], team[3])
+#         x = random.randint(1,3000)/1000
+#         print(f'[DEBUG] Random sleep {x}s')
+#         time.sleep(x)
