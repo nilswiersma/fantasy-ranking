@@ -37,7 +37,12 @@
         {% for event, data in season_data.events.items() %}
         <tr style="border-top: 1px solid black">
             <th rowspan="3">
-                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/overview">{{ event[1] }}</a>
+                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/overview">{{ event[1] }}</a> <br/>
+                {% if data[0] %}
+                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/{{ data[0][1] }}/join/json">stats</a>
+                {% elif data[1] %}
+                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/{{ data[1][1] }}/join/json">stats</a>
+                {% endif %}
             </th>
             <th align="left">Points</th>
             {% if not data[0] %}
@@ -77,7 +82,7 @@
             {% endif %}
         </tr>
         <tr>
-            <th align="left">Season points</th>
+            <th align="left">Season</th>
             {% if data[0] %}
                 <td align="right">{{ data[0][6] }}</td>
             {% if data[1] %}

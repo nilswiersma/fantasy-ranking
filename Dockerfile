@@ -6,7 +6,10 @@ RUN apk update && apk add python3-dev gcc libc-dev git tree
 RUN git clone https://github.com/nilswiersma/fantasy-ranking.git
 
 WORKDIR /fantasy-ranking
+RUN mkdir data
+
 RUN echo `ls -a /fantasy-ranking`
+RUN echo `ls -a .`
 
 # install the dependencies and packages in the requirements file
 RUN pip install -r requirements.txt

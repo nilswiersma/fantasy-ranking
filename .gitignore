@@ -3,4 +3,3 @@ __pycache__
 .jsoncache
 *~
 *.egg-info
-points.sqlite
