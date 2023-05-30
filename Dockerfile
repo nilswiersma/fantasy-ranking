@@ -6,7 +6,6 @@ RUN apk update && apk add python3-dev gcc libc-dev git tree
 RUN git clone https://github.com/nilswiersma/fantasy-ranking.git
 
 WORKDIR /fantasy-ranking
-RUN mkdir data
 
 RUN echo `ls -a /fantasy-ranking`
 RUN echo `ls -a .`
