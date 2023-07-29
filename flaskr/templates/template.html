@@ -1,5 +1,10 @@
 <!doctype html>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+
+<!-- <body class="colsCustom1101"><div class="bgPadding"><div class="widthControl" -->
 
 {% if can_refresh %}
 <form method="post">
@@ -7,46 +12,45 @@
 </form>
 {% endif %}
 
+<form method="post">
+    <input name="nils_hltvlink" id="nils_hltvlink" required>
+    <input type="submit" value="Add to Nils">
+</form>
+<form method="post">
+    <input name="eric_hltvlink" id="eric_hltvlink" required>
+    <input type="submit" value="Add to Eric">
+</form>
+
+<hr/>
+
 <table style="border-collapse: collapse;"">
     <tr>
-        <td rowspan="2" colspan="2"/>
+        <th rowspan="2" colspan="2"/>
         <th>Nils</th>
         <th>Eric</th>
     </tr>
     <tr>
-        <td>
-            <form method="post">
-                <input name="nils_hltvlink" id="nils_hltvlink" style="width: 30%" required>
-                <input type="submit" value="set">
-            </form>
-        </td>
-        <td>
-            <form method="post">
-                <input name="eric_hltvlink" id="eric_hltvlink" style="width: 30%" required>
-                <input type="submit" value="set">
-            </form>
-        </td>
     </tr>
-    {% for season, season_data in data.items() %}
-        <tr style="border-top: 1px solid black">
+    {% for season, season_data in data.items()|reverse %}
+        <tr>
             <th>{{ season }}</th>
             <th align="left">Total</th>
-            <td align="right">{{ season_data.totals[0] }}</td>
-            <td align="right">{{ season_data.totals[1] }}</td>
+            <th align="right">{{ season_data.totals[0] }}</th>
+            <th align="right">{{ season_data.totals[1] }}</th>
         </tr>
         {% for event, data in season_data.events.items() %}
-        <tr style="border-top: 1px solid black">
+        <tr>
             <th rowspan="3">
-                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/overview">{{ event[1] }}</a> <br/>
+                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/overview">{{ event[1] }}</a> 
                 {% if data[0] %}
-                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/{{ data[0][1] }}/join/json">stats</a>
+                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/{{ data[0][1] }}/join/json">📈</a>
                 {% elif data[1] %}
-                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/{{ data[1][1] }}/join/json">stats</a>
+                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/{{ data[1][1] }}/join/json">📈</a>
                 {% endif %}
             </th>
             <th align="left">Points</th>
             {% if not data[0] %}
-            <td rowspan="3" align="center">
+            <td class="playerCol " rowspan="3" align="center">
                 {% if event[2] == 'DraftEvent' %}
                     <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/join">JOIN NOW!</a>
                 {% else %}
@@ -93,3 +97,5 @@
         {% endfor %}
     {% endfor %}
 </table>
+
+<!-- </div></body> -->

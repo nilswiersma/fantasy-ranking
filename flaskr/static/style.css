@@ -1,0 +1,42 @@
+body,
+html {
+    background-color: #1b1f23;
+    color: #929a9e;
+    font-family: Open Sans, sans-serif;
+    font-size: 12px;
+    line-height: 1.66667;
+}
+
+table {
+    width: 100%;
+    max-width: 975px;
+    border-collapse: collapse;
+    table-layout: fixed;
+    box-shadow: 0 1px 1px 0 rgba(0, 0, 0, .5);
+    background-color: #2d3844;
+}
+
+tr {
+    border-top: 1px solid #495867;
+}
+
+th {
+    background-color: #364250;
+}
+
+td,
+th {
+    white-space: wrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-left: 1px solid #495867;
+    border-right: 1px solid #495867;
+    padding: 5px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+
+a {
+    text-decoration: none;
+    color: #87a3bf;
+}
