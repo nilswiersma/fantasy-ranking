@@ -1,0 +1,71 @@
+<!doctype html>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="{{ url_for('static', filename='sorttable.js') }}"></script>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<table id="playerTable">
+    <thead id="playerTableHead"></thead>
+    <tbody id="playerTableBody"></tbody>
+</table>
+
+<div id="resp"></div>
+
+<script>
+window.addEventListener('load', async () => {
+    // await fetch('https://www.hltv.org/fantasy/{{ event }}/leagues/{{ league }}/join/json', {
+    await fetch('{{ url_for("json_test") }}', {
+        method: "GET",
+        // headers: {
+        //     "Content-Type": "application/json",
+        // },
+        mode: "no-cors",
+        origin: null,
+        referrerPolicy: "no-referrer",
+    }).then(function(resp) {
+        var ret = resp.json();
+        return ret;
+    }).then(function(data) {
+        document.querySelector('#resp').textContent = JSON.stringify(data);
+        console.log(data);
+        
+        var cell;
+        var row;
+
+        row = document.createElement("tr");
+        document.querySelector('#playerTableHead').appendChild(row);
+        
+        cell = document.createElement("th"); cell.innerHTML = 'cost'; row.appendChild(cell);        
+        cell = document.createElement("th"); cell.innerHTML = 'name'; row.appendChild(cell);        
+        cell = document.createElement("th"); cell.innerHTML = 'playerLevel'; row.appendChild(cell);        
+        cell = document.createElement("th"); cell.innerHTML = 'teamRank'; row.appendChild(cell);        
+        cell = document.createElement("th"); cell.innerHTML = 'teamName'; row.appendChild(cell);
+
+        forEach(data['moneyDraftData']['teams'][0]['players'][0]['playerData']['stats'], function(stat, statName) {
+            cell = document.createElement("th"); cell.innerHTML = statName; row.appendChild(cell);
+        });
+
+        forEach(data['moneyDraftData']['teams'], function(team) {
+        // var team = data['moneyDraftData']['teams'][0];
+            forEach(team['players'], function(player) {
+            // var player = team['players'][0];
+                row = document.createElement("tr");
+                document.querySelector('#playerTableBody').appendChild(row);
+
+                cell = document.createElement("td"); cell.innerHTML = player['cost']; row.appendChild(cell);
+                cell = document.createElement("td"); cell.innerHTML = player['playerData']['name']; row.appendChild(cell);
+                cell = document.createElement("td"); cell.innerHTML = player['playerData']['playerLevel']; row.appendChild(cell);
+                cell = document.createElement("td"); cell.innerHTML = team['rank']; row.appendChild(cell);
+                cell = document.createElement("td"); cell.innerHTML = team['teamData']['name']; row.appendChild(cell);
+                
+                forEach(player['playerData']['stats'], function(stat, statName) {
+                    cell = document.createElement("td"); cell.innerHTML = stat; row.appendChild(cell);
+                });
+            });
+        });
+
+        sorttable.makeSortable(document.querySelector('#playerTable'));
+    })
+}, false);
+</script>

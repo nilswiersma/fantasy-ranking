@@ -40,3 +40,16 @@ a {
     text-decoration: none;
     color: #87a3bf;
 }
+
+#playerTable {
+    width: 980px;
+    white-space: nowrap;
+}
+
+#playerTable, td {
+    /* max-width: none;
+    white-space: none;
+    overflow: none;
+    text-overflow: none;
+    min-width: 60px; */
+}
