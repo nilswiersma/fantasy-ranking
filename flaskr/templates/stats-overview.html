@@ -14,15 +14,18 @@
 
 <script>
 window.addEventListener('load', async () => {
-    // await fetch('https://www.hltv.org/fantasy/{{ event }}/leagues/{{ league }}/join/json', {
-    await fetch('{{ url_for("json_test") }}', {
-        method: "GET",
-        // headers: {
-        //     "Content-Type": "application/json",
-        // },
+    await fetch('{{ url_for("stats") }}', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
         mode: "no-cors",
         origin: null,
         referrerPolicy: "no-referrer",
+        body: JSON.stringify({
+            "event": "{{ event }}",
+            "league": "{{ league }}",
+        })
     }).then(function(resp) {
         var ret = resp.json();
         return ret;

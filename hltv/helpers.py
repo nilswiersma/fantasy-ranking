@@ -8,11 +8,33 @@ import time
 HLTV_FANTASY_OVERVIEW = 'https://www.hltv.org/fantasy/json'
 HLTV_FANTASY_SINGLE_TEAM = 'https://www.hltv.org/fantasy/{}/league/{}/overview/{}/json'
 HLTV_FANTASY_SINGLE_TEAM_RE = r'https://www.hltv.org/fantasy/(\d+)/league/(\d+)/team/(\d+)/*'
+HLTV_FANTASY_LEAGUE_STATS = 'https://www.hltv.org/fantasy/{}/leagues/{}/join/json'
 
 DB = './data/points.sqlite'
 DB_TEMPLATE = './flaskr/templates/points.sqlite'
 
-HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46'}
+# HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46'}
+
+HEADER = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+    }
+
+def get_league_stats(event_id, league_id):
+    resp = requests.get(HLTV_FANTASY_LEAGUE_STATS.format(event_id, league_id), headers=HEADER)
+    # TODO log it to .jsoncache with a timestamp
+    if resp.status_code == 200:
+        return json.loads(resp.text)
+    else:
+        raise Exception(f'{resp.status_code=} {resp.text=}')
 
 def get_current_fantasy_overview():
     ret = requests.get(HLTV_FANTASY_OVERVIEW, headers=HEADER)

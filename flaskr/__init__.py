@@ -45,9 +45,14 @@ def create_app():
     
     @app.route("/stats", methods=('GET', 'POST'))
     def stats():
-        event = request.args.get('event')
-        league = request.args.get('league')
-        return render_template('stats-overview.html', event=event, league=league)
+        if request.method == 'POST':
+            args = json.loads(request.get_data().decode())
+            stats = get_league_stats(args['event'], args['league'])
+            return jsonify(stats)
+        else:
+            event = request.args.get('event')
+            league = request.args.get('league')
+            return render_template('stats-overview.html', event=event, league=league)
     
     @app.route('/json_test')
     def json_test():
