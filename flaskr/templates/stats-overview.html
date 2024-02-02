@@ -5,6 +5,17 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<table id="selectedTeamTable">
+    <thead id="selectedTeamTableHead"></thead>
+    <tbody id="selectedTeamTableBody"></tbody>
+    <tfoot id="selectedTeamTableFoot"><tr>
+        <td><b>total:</b></td>
+        <td id="teamCost">0</td>
+        <td><b>remain:</b></td>
+        <td id="budgetLeft">1000000</td>
+    </tr></tfoot>
+</table>
+<br/>
 <table id="playerTable">
     <thead id="playerTableHead"></thead>
     <tbody id="playerTableBody"></tbody>
@@ -13,6 +24,64 @@
 <div id="resp"></div>
 
 <script>
+
+var selectedTeam = [];
+var playerData = {};
+var tableHeaders = [];
+
+function buildPlayerRow(name) {
+    var cell;
+    var row = document.createElement("tr");
+    forEach(tableHeaders, function(header) {
+        cell = document.createElement("td"); cell.innerHTML = playerData[name][header]; row.appendChild(cell);
+    });
+    return row;
+}
+
+function updateTeamFoot(args) { 
+    var teamCost = 0;
+    forEach(document.querySelector('#selectedTeamTableBody').children, function(row) {
+        teamCost += parseInt(row.children[1].innerHTML);
+    });
+    document.querySelector('#teamCost').innerHTML = teamCost;
+    document.querySelector('#budgetLeft').innerHTML = 1000000 - teamCost;
+    
+}
+
+function togglePlayerInTeam(args) {
+    var name = args.target.innerHTML;
+    if (selectedTeam.length >= 5) {
+        console.log('already 5 players in team');
+        return;
+    }
+    if (selectedTeam.includes(name)) {
+        console.log(`${name} already in team`);
+        return;
+    }
+    // check if there are already two players with the same team in selectedTeam
+    var teamName = playerData[name]['teamName'];
+    var teamCtr = 0;
+    forEach(selectedTeam, function(name2) {
+        if (playerData[name2]['teamName'] == teamName) {
+            teamCtr += 1;
+        }
+    });
+    if (teamCtr == 2) {
+        console.log(`already 2 players from ${teamName} in team`);
+        return;
+    }
+    
+    selectedTeam.push(name);
+    var playerRow = args.target.parentNode.cloneNode(true);
+    playerRow.onclick = function (args) {
+        playerRow.remove();
+        selectedTeam.pop(name);
+        updateTeamFoot();
+    }
+    document.querySelector('#selectedTeamTableBody').appendChild(playerRow);
+    updateTeamFoot();
+}
+
 window.addEventListener('load', async () => {
     await fetch('{{ url_for("stats") }}', {
         method: "POST",
@@ -30,45 +99,54 @@ window.addEventListener('load', async () => {
         var ret = resp.json();
         return ret;
     }).then(function(data) {
-        document.querySelector('#resp').textContent = JSON.stringify(data);
+        // document.querySelector('#resp').textContent = JSON.stringify(data);
         console.log(data);
         
-        var cell;
-        var row;
-
-        row = document.createElement("tr");
-        document.querySelector('#playerTableHead').appendChild(row);
-        
-        cell = document.createElement("th"); cell.innerHTML = 'cost'; row.appendChild(cell);        
-        cell = document.createElement("th"); cell.innerHTML = 'name'; row.appendChild(cell);        
-        cell = document.createElement("th"); cell.innerHTML = 'playerLevel'; row.appendChild(cell);        
-        cell = document.createElement("th"); cell.innerHTML = 'teamRank'; row.appendChild(cell);        
-        cell = document.createElement("th"); cell.innerHTML = 'teamName'; row.appendChild(cell);
+        tableHeaders.push('name');
+        tableHeaders.push('cost');
+        tableHeaders.push('playerLevel');
+        tableHeaders.push('teamRank');
+        tableHeaders.push('teamName');
 
         forEach(data['moneyDraftData']['teams'][0]['players'][0]['playerData']['stats'], function(stat, statName) {
-            cell = document.createElement("th"); cell.innerHTML = statName; row.appendChild(cell);
+            tableHeaders.push(statName);
         });
 
-        forEach(data['moneyDraftData']['teams'], function(team) {
-        // var team = data['moneyDraftData']['teams'][0];
-            forEach(team['players'], function(player) {
-            // var player = team['players'][0];
-                row = document.createElement("tr");
-                document.querySelector('#playerTableBody').appendChild(row);
+        tableHeaders.push('r/$');
+        
+        var cell;
+        var row = document.createElement("tr");
+        forEach(tableHeaders, function(header) {
+            cell = document.createElement("th"); cell.innerHTML = header; row.appendChild(cell);        
+        });
+        
+        document.querySelector('#playerTableHead').appendChild(row);
+        document.querySelector('#selectedTeamTableHead').appendChild(row.cloneNode(true));
 
-                cell = document.createElement("td"); cell.innerHTML = player['cost']; row.appendChild(cell);
-                cell = document.createElement("td"); cell.innerHTML = player['playerData']['name']; row.appendChild(cell);
-                cell = document.createElement("td"); cell.innerHTML = player['playerData']['playerLevel']; row.appendChild(cell);
-                cell = document.createElement("td"); cell.innerHTML = team['rank']; row.appendChild(cell);
-                cell = document.createElement("td"); cell.innerHTML = team['teamData']['name']; row.appendChild(cell);
-                
-                forEach(player['playerData']['stats'], function(stat, statName) {
-                    cell = document.createElement("td"); cell.innerHTML = stat; row.appendChild(cell);
+        forEach(data['moneyDraftData']['teams'], function(team) {
+            forEach(team['players'], function(player) {
+                // waiting for the day there are two players with exact same name
+                playerData[player['playerData']['name']] = {}
+                forEach(tableHeaders, function(header) {
+                    playerData[player['playerData']['name']][header] = player['playerData']['stats'][header];
                 });
+                playerData[player['playerData']['name']]['name'] = player['playerData']['name'];
+                playerData[player['playerData']['name']]['cost'] = player['cost'];
+                playerData[player['playerData']['name']]['playerLevel'] = player['playerData']['playerLevel'];
+                playerData[player['playerData']['name']]['teamRank'] = team['rank'];
+                playerData[player['playerData']['name']]['teamName'] = team['teamData']['name'];
+                playerData[player['playerData']['name']]['r/$'] = (100000 * player['playerData']['stats']['rating'] / player['cost']).toFixed(4);
             });
         });
 
+        forEach(playerData, function(_, player) {
+            row = buildPlayerRow(player);
+            row.children[0].onclick = togglePlayerInTeam;
+            document.querySelector('#playerTableBody').appendChild(row);
+        });
+
         sorttable.makeSortable(document.querySelector('#playerTable'));
+        sorttable.makeSortable(document.querySelector('#selectedTeamTable'));
     })
 }, false);
 </script>

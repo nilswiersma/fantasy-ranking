@@ -4,11 +4,13 @@ import sqlite3
 import re
 import random
 import time
+import os
 
 HLTV_FANTASY_OVERVIEW = 'https://www.hltv.org/fantasy/json'
 HLTV_FANTASY_SINGLE_TEAM = 'https://www.hltv.org/fantasy/{}/league/{}/overview/{}/json'
 HLTV_FANTASY_SINGLE_TEAM_RE = r'https://www.hltv.org/fantasy/(\d+)/league/(\d+)/team/(\d+)/*'
 HLTV_FANTASY_LEAGUE_STATS = 'https://www.hltv.org/fantasy/{}/leagues/{}/join/json'
+HLTV_FANTASY_USER_SEASON_STATS = 'https://www.hltv.org/fantasy/user/{}/overview/json'
 
 DB = './data/points.sqlite'
 DB_TEMPLATE = './flaskr/templates/points.sqlite'
@@ -28,13 +30,24 @@ HEADER = {
         'Sec-Fetch-Site': 'same-origin',
     }
 
+def get_teams_current_season(user_id):
+    resp = requests.get(HLTV_FANTASY_USER_SEASON_STATS.format(user_id), headers=HEADER)
+    if resp.status_code == 200:
+        return json.loads(resp.text)
+    else:
+        raise Exception(f'{resp.status_code=} {resp.text=}')
+
 def get_league_stats(event_id, league_id):
+    print(f'[DEBUG] {HLTV_FANTASY_LEAGUE_STATS.format(event_id, league_id)=}')
     resp = requests.get(HLTV_FANTASY_LEAGUE_STATS.format(event_id, league_id), headers=HEADER)
     # TODO log it to .jsoncache with a timestamp
     if resp.status_code == 200:
         return json.loads(resp.text)
     else:
         raise Exception(f'{resp.status_code=} {resp.text=}')
+    # with open('flaskr/.jsoncache/stats-test.json', 'r') as f:
+    #     return json.load(f)
+
 
 def get_current_fantasy_overview():
     ret = requests.get(HLTV_FANTASY_OVERVIEW, headers=HEADER)
