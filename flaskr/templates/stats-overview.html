@@ -9,6 +9,7 @@
 <button onclick="readTeam('eric')">Read team Eric</button>
 <button onclick="collectMoreStats()">More stats!</button>
 <button onclick="clearCache()">Clear cache</button>
+<button onclick="toggleHideUnselectable()">Toggle unselectable</button>
 
 <div id="moreStatsInstructions"></div>
 <div id="moreStatsStatus"></div>
@@ -35,6 +36,8 @@
 var selectedTeam = [];
 var playerData = {};
 var tableHeaders = [];
+var unselectableHidden = false;
+
 tableHeaders.push('name');
 tableHeaders.push('cost');
 tableHeaders.push('playerLevel');
@@ -62,6 +65,14 @@ tableHeaders.push('3-maps');
 tableHeaders.push('3-rounds');
 tableHeaders.push('3-kd_diff');
 tableHeaders.push('3-kd_ratio');
+
+function toggleHideUnselectable() {
+    unselectableHidden = !unselectableHidden;
+    document.querySelectorAll('.playerUnselectable');
+    forEach(document.querySelectorAll('.playerUnselectable'), function(node) { 
+        node.hidden = unselectableHidden;
+    }); 
+}
 
 function clearCache() {
     localStorage.removeItem(`https://www.hltv.org/fantasy/{{event}}/overview`);
@@ -114,28 +125,29 @@ function updateTeamFoot(args) {
 function updatePlayerTable(args) {
     forEach(document.querySelector('#playerTableBody').children, function(row) {
         row.classList.remove(...row.classList);
+        row.hidden = false;
         var playerName = row.children[0].innerHTML;
         if (selectedTeam.includes(playerName)) {
             row.classList.add('playerSelected');
-            return;
         } 
 
-        if (parseInt(document.querySelector('#budgetLeft').innerHTML) < playerData[playerName]['cost']) {
+        else if (parseInt(document.querySelector('#budgetLeft').innerHTML) < playerData[playerName]['cost']) {
             row.classList.add('playerUnselectable');
-            return;
-        } 
-    
-        var teamCtr = 0;
-        forEach(selectedTeam, function(player) {
-            if (playerData[playerName]['teamName'] == playerData[player]['teamName']) {
-                teamCtr += 1;
+            row.hidden = unselectableHidden;
+        } else {
+            var teamCtr = 0;
+            forEach(selectedTeam, function(player) {
+                if (playerData[playerName]['teamName'] == playerData[player]['teamName']) {
+                    teamCtr += 1;
+                }
+            });
+            if (teamCtr >= 2) {
+                row.classList.add('playerUnselectable');
+                row.hidden = unselectableHidden;
+            } else {
+                row.classList.add('playerSelectable');
             }
-        });
-        if (teamCtr >= 2) {
-            row.classList.add('playerUnselectable');
-            return;
         }
-        row.classList.add('playerSelectable');
     });
 }
 
