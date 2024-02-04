@@ -8,8 +8,8 @@ html {
 }
 
 table {
-    width: 100%;
-    max-width: 975px;
+    /* width: 100%;
+    max-width: 975px; */
     border-collapse: collapse;
     table-layout: fixed;
     box-shadow: 0 1px 1px 0 rgba(0, 0, 0, .5);
@@ -26,6 +26,7 @@ th {
 
 td,
 th {
+    max-width: 40px;
     white-space: wrap;
     overflow: hidden;
     /* text-overflow: ".."; */
@@ -42,7 +43,7 @@ a {
 }
 
 .statsTable {
-    width: 980px;
+    /* width: 980px; */
     white-space: nowrap;
 }
 

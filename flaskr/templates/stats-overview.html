@@ -7,6 +7,11 @@
 
 <button onclick="readTeam('nils')">Read team Nils</button>
 <button onclick="readTeam('eric')">Read team Eric</button>
+<button onclick="collectMoreStats()">More stats!</button>
+<button onclick="clearCache()">Clear cache</button>
+
+<div id="moreStatsInstructions"></div>
+<div id="moreStatsStatus"></div>
 
 <table id="selectedTeamTable" class="statsTable">
     <thead id="selectedTeamTableHead"></thead>
@@ -30,6 +35,37 @@
 var selectedTeam = [];
 var playerData = {};
 var tableHeaders = [];
+tableHeaders.push('name');
+tableHeaders.push('cost');
+tableHeaders.push('playerLevel');
+tableHeaders.push('teamName');
+tableHeaders.push('teamRank');
+tableHeaders.push('r/$');
+tableHeaders.push('rating');
+tableHeaders.push('1-rating');
+tableHeaders.push('3-rating');
+tableHeaders.push('1-3-rDiff');
+tableHeaders.push('awpKillsPerRound');
+tableHeaders.push('cluthesPerRound');
+tableHeaders.push('dpr');
+tableHeaders.push('entryFragsPerRound');
+tableHeaders.push('hsPercentage');
+tableHeaders.push('multiKillRounds');
+tableHeaders.push('supportRounds');
+tableHeaders.push('ctRating');
+tableHeaders.push('tRating');
+tableHeaders.push('1-maps');
+tableHeaders.push('1-rounds');
+tableHeaders.push('1-kd_diff');
+tableHeaders.push('1-kd_ratio');
+tableHeaders.push('3-maps');
+tableHeaders.push('3-rounds');
+tableHeaders.push('3-kd_diff');
+tableHeaders.push('3-kd_ratio');
+
+function clearCache() {
+    localStorage.removeItem(`https://www.hltv.org/fantasy/{{event}}/overview`);
+}
 
 function buildPlayerRow(name) {
     var cell;
@@ -155,74 +191,6 @@ function addPlayerToTeam(node) {
     updatePlayerTable();
 }
 
-window.addEventListener('load', async () => {
-    await fetch('{{ url_for("stats") }}', {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        mode: "no-cors",
-        origin: null,
-        referrerPolicy: "no-referrer",
-        body: JSON.stringify({
-            "event": "{{ event }}",
-            "league": "{{ league }}",
-        })
-    }).then(function(resp) {
-        var ret = resp.json();
-        return ret;
-    }).then(function(data) {
-        // document.querySelector('#resp').textContent = JSON.stringify(data);
-        console.log(data);
-        
-        tableHeaders.push('name');
-        tableHeaders.push('cost');
-        tableHeaders.push('playerLevel');
-        tableHeaders.push('teamName');
-        tableHeaders.push('teamRank');
-
-        forEach(data['moneyDraftData']['teams'][0]['players'][0]['playerData']['stats'], function(stat, statName) {
-            tableHeaders.push(statName);
-        });
-
-        tableHeaders.push('r/$');
-        
-        var cell;
-        var row = document.createElement("tr");
-        forEach(tableHeaders, function(header) {
-            cell = document.createElement("th"); cell.innerHTML = header; row.appendChild(cell);        
-        });
-        
-        document.querySelector('#playerTableHead').appendChild(row);
-        document.querySelector('#selectedTeamTableHead').appendChild(row.cloneNode(true));
-
-        forEach(data['moneyDraftData']['teams'], function(team) {
-            forEach(team['players'], function(player) {
-                // waiting for the day there are two players with exact same name
-                playerData[player['playerData']['name']] = {}
-                forEach(tableHeaders, function(header) {
-                    playerData[player['playerData']['name']][header] = player['playerData']['stats'][header];
-                });
-                playerData[player['playerData']['name']]['name'] = player['playerData']['name'];
-                playerData[player['playerData']['name']]['cost'] = player['cost'];
-                playerData[player['playerData']['name']]['playerLevel'] = player['playerData']['playerLevel'];
-                playerData[player['playerData']['name']]['teamRank'] = team['rank'];
-                playerData[player['playerData']['name']]['teamName'] = team['teamData']['name'];
-                playerData[player['playerData']['name']]['r/$'] = (100000 * player['playerData']['stats']['rating'] / player['cost']).toFixed(4);
-            });
-        });
-
-        forEach(playerData, function(_, player) {
-            row = buildPlayerRow(player);
-            row.children[0].onclick = addPlayerToTeamClick;
-            document.querySelector('#playerTableBody').appendChild(row);
-        });
-
-        sorttable.makeSortable(document.querySelector('#playerTable'));
-        sorttable.makeSortable(document.querySelector('#selectedTeamTable'));
-    })
-}, false);
-
 function readTeam(fantasyPlayer) {
     fetch('{{ url_for("team") }}', {
         method: "POST",
@@ -241,12 +209,137 @@ function readTeam(fantasyPlayer) {
         var ret = resp.json();
         return ret;
     }).then(function(data) {
-        forEach(selectedTeam, function(player) { 
-            removePlayerFromTeam(player);
-        })
+        selectedTeam = [];
+        document.querySelector('#selectedTeamTableBody').innerHTML = '';
+        // forEach(selectedTeam, function(player) { 
+        //     removePlayerFromTeam(player);
+        // })
         forEach(data['teamOverviewPlayers'], function(player) {
+            // console.log(player);
             addPlayerToTeam(document.querySelector(`#_${player['player']['name']}`));
         });
     });
 }
+
+function collectMoreStats() {
+    document.querySelector('#moreStatsInstructions').innerHTML = 'Copy <a href="{{ url_for('static', filename='more-stats.js') }}">this code</a>, paste it in the window that <button onclick="window.open(`https://www.hltv.org/fantasy/{{event}}/overview`);">this button opens</button>, and then come back here and wait a minute or two.';
+    document.querySelector('#moreStatsStatus').innerHTML = 'Waiting for more stats to come in..';
+}
+
+function moreStatsHandler(event) {
+    console.log(event);
+    // window.removeEventListener("message", moreStatsHandler);
+    document.querySelector('#moreStatsInstructions').innerHTML = '';
+    forEach(event.data, function(stats, playerName) {
+        playerData[playerName] = {...playerData[playerName], ...stats};
+        playerData[playerName]['1-3-rDiff'] = (playerData[playerName]['1-rating'] - playerData[playerName]['3-rating']).toFixed(2);
+    });
+    localStorage.setItem('https://www.hltv.org/fantasy/{{event}}/overview', JSON.stringify(playerData));
+    buildPlayerTable();
+    document.querySelector('#moreStatsStatus').innerHTML = 'Additional stats received and added!';
+}
+
+function buildPlayerTable() {
+    document.querySelector('#playerTableBody').innerHTML = ''; 
+    forEach(playerData, function(_, player) {
+        row = buildPlayerRow(player);
+        row.children[0].onclick = addPlayerToTeamClick;
+        document.querySelector('#playerTableBody').appendChild(row);
+    });
+}
+
+window.addEventListener('load', async () => {
+    var cachedPlayerData = localStorage.getItem('https://www.hltv.org/fantasy/{{event}}/overview');
+    if (!!cachedPlayerData) {
+        console.log('using cached playerData');
+        playerData = JSON.parse(cachedPlayerData);
+    } else {
+        await fetch('{{ url_for("stats") }}', {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            mode: "no-cors",
+            origin: null,
+            referrerPolicy: "no-referrer",
+            body: JSON.stringify({
+                "event": "{{ event }}",
+                "league": "{{ league }}",
+            })
+        }).then(function(resp) {
+            var ret = resp.json();
+            return ret;
+        }).then(function(data) {
+            // document.querySelector('#resp').textContent = JSON.stringify(data);
+            console.log(data);
+            
+
+            forEach(data['moneyDraftData']['teams'][0]['players'][0]['playerData']['stats'], function(stat, statName) {
+                if (tableHeaders.indexOf(statName) == -1) {
+                    console.log(`${statName} not in tableHeaders`)
+                }
+            });
+
+            forEach(data['moneyDraftData']['teams'], function(team) {
+                forEach(team['players'], function(player) {
+                    // waiting for the day there are two players with exact same name
+                    playerData[player['playerData']['name']] = {}
+                    forEach(tableHeaders, function(header) {
+                        playerData[player['playerData']['name']][header] = player['playerData']['stats'][header];
+                    });
+                    playerData[player['playerData']['name']]['name'] = player['playerData']['name'];
+                    playerData[player['playerData']['name']]['cost'] = player['cost'];
+                    playerData[player['playerData']['name']]['playerLevel'] = player['playerData']['playerLevel'];
+                    playerData[player['playerData']['name']]['teamRank'] = team['rank'];
+                    playerData[player['playerData']['name']]['teamName'] = team['teamData']['name'];
+                    playerData[player['playerData']['name']]['r/$'] = (100000 * player['playerData']['stats']['rating'] / player['cost']).toFixed(4);
+                });
+            });
+            
+        });
+    }
+
+    var cell;
+    var row = document.createElement("tr");
+    forEach(tableHeaders, function(header) {
+        cell = document.createElement("th"); cell.innerHTML = header; row.appendChild(cell);        
+    });
+    document.querySelector('#playerTableHead').appendChild(row);
+    document.querySelector('#selectedTeamTableHead').appendChild(row.cloneNode(true));
+    sorttable.makeSortable(document.querySelector('#playerTable'));
+    sorttable.makeSortable(document.querySelector('#selectedTeamTable'));    
+    buildPlayerTable();
+    window.addEventListener("message", moreStatsHandler, false);
+}, false);
+
+
+
+
+// // transfers sessionStorage from one tab to another
+// var sessionStorage_transfer = function(event) {
+//     console.log('Session storage event!');
+//   if(!event) { event = window.event; } // ie suq
+//   if(!event.newValue) return;          // do nothing if no value to work with
+//   if (event.key == 'getSessionStorage') {
+//     // another tab asked for the sessionStorage -> send it
+//     localStorage.setItem('sessionStorage', JSON.stringify(sessionStorage));
+//     // the other tab should now have it, so we're done with it.
+//     localStorage.removeItem('sessionStorage'); // <- could do short timeout as well.
+//   } else if (event.key == 'sessionStorage' && !sessionStorage.length) {
+//     // another tab sent data <- get it
+//     var data = JSON.parse(event.newValue);
+//     for (var key in data) {
+//       sessionStorage.setItem(key, data[key]);
+//     }
+//   }
+// };
+
+// listen for changes to localStorage
+// if(window.addEventListener) {
+//   window.addEventListener("storage", sessionStorage_transfer, false);
+// } else {
+//   window.attachEvent("onstorage", sessionStorage_transfer);
+// };
+
 </script>
+
