@@ -41,9 +41,26 @@ a {
     color: #87a3bf;
 }
 
-#playerTable {
+.statsTable {
     width: 980px;
     white-space: nowrap;
+}
+
+.playerSelectable {
+
+}
+
+.playerUnselectable {
+    /* background-color: #080e14; */
+    background-color: #2b3035;
+    /* color: #2b3035; */
+    color: #565c5f;
+    /* color: #000000; */
+}
+
+.playerSelected {
+    background-color: #274a6d;
+    color: #ecf0f1;
 }
 
 #playerTable, td {

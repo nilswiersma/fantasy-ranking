@@ -5,18 +5,20 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<table id="selectedTeamTable">
+<button onclick="readTeam('nils')">Read team Nils</button>
+<button onclick="readTeam('eric')">Read team Eric</button>
+
+<table id="selectedTeamTable" class="statsTable">
     <thead id="selectedTeamTableHead"></thead>
     <tbody id="selectedTeamTableBody"></tbody>
     <tfoot id="selectedTeamTableFoot"><tr>
-        <td><b>total:</b></td>
-        <td id="teamCost">0</td>
-        <td><b>remain:</b></td>
-        <td id="budgetLeft">1000000</td>
+        <td><b>budget:</b></td>
+        <td colspan="2"><span id="teamCost">0</span> / <span id="budgetLeft">0</span></td>
+        <td><b>avgs:</b></td>
     </tr></tfoot>
 </table>
 <br/>
-<table id="playerTable">
+<table id="playerTable" class="statsTable">
     <thead id="playerTableHead"></thead>
     <tbody id="playerTableBody"></tbody>
 </table>
@@ -32,6 +34,7 @@ var tableHeaders = [];
 function buildPlayerRow(name) {
     var cell;
     var row = document.createElement("tr");
+    row.id = `_${name}`;
     forEach(tableHeaders, function(header) {
         cell = document.createElement("td"); cell.innerHTML = playerData[name][header]; row.appendChild(cell);
     });
@@ -40,16 +43,85 @@ function buildPlayerRow(name) {
 
 function updateTeamFoot(args) { 
     var teamCost = 0;
-    forEach(document.querySelector('#selectedTeamTableBody').children, function(row) {
-        teamCost += parseInt(row.children[1].innerHTML);
-    });
-    document.querySelector('#teamCost').innerHTML = teamCost;
-    document.querySelector('#budgetLeft').innerHTML = 1000000 - teamCost;
-    
+    var teamRating = 0;
+    if (selectedTeam.length > 0) {
+        forEach(selectedTeam, function(player) {
+            teamCost += playerData[player]['cost'];
+            teamRating += parseFloat(playerData[player]['rating']);
+        });
+        document.querySelector('#teamCost').innerHTML = teamCost;
+        document.querySelector('#budgetLeft').innerHTML = 1000000 - teamCost;
+
+        var averages = {};
+        forEach(tableHeaders.slice(4), function(header) {
+            averages[header] = 0;
+            forEach(selectedTeam, function(player) {
+                averages[header] += parseFloat(playerData[player][header]);
+            });
+            averages[header] = averages[header] / selectedTeam.length;
+        });
+
+        // remove all previous calculations and re-add them
+        x = document.querySelector('#selectedTeamTableFoot').children[0].children;
+        if (Object.entries(x).slice(3).length > 0) {
+            forEach(Object.entries(x).slice(3), function(node) {
+                node[1].remove();
+            })
+        }
+        var cell;
+        forEach(averages, function(avg) {
+            cell = document.createElement("td"); cell.innerHTML = avg.toFixed(4); document.querySelector('#selectedTeamTableFoot').children[0].appendChild(cell);
+        });
+    }
 }
 
-function togglePlayerInTeam(args) {
-    var name = args.target.innerHTML;
+function updatePlayerTable(args) {
+    forEach(document.querySelector('#playerTableBody').children, function(row) {
+        row.classList.remove(...row.classList);
+        var playerName = row.children[0].innerHTML;
+        if (selectedTeam.includes(playerName)) {
+            row.classList.add('playerSelected');
+            return;
+        } 
+
+        if (parseInt(document.querySelector('#budgetLeft').innerHTML) < playerData[playerName]['cost']) {
+            row.classList.add('playerUnselectable');
+            return;
+        } 
+    
+        var teamCtr = 0;
+        forEach(selectedTeam, function(player) {
+            if (playerData[playerName]['teamName'] == playerData[player]['teamName']) {
+                teamCtr += 1;
+            }
+        });
+        if (teamCtr >= 2) {
+            row.classList.add('playerUnselectable');
+            return;
+        }
+        row.classList.add('playerSelectable');
+    });
+}
+
+function removePlayerFromTeamClick(args) {
+    var name = args.target.parentNode.id.replace('Team', '').replace('_', '');
+    removePlayerFromTeam(name);
+}
+
+function removePlayerFromTeam(name) {
+    document.querySelector(`#_${name}Team`).remove();
+    // document.querySelector(`#_${name}`).onclick = addPlayerToTeamClick;
+    selectedTeam.splice(selectedTeam.indexOf(name), 1);
+    updateTeamFoot();
+    updatePlayerTable();
+}
+
+function addPlayerToTeamClick(args) {
+    addPlayerToTeam(args.target.parentNode);
+}
+
+function addPlayerToTeam(node) {
+    var name = node.id.replace('_', '');
     if (selectedTeam.length >= 5) {
         console.log('already 5 players in team');
         return;
@@ -72,14 +144,15 @@ function togglePlayerInTeam(args) {
     }
     
     selectedTeam.push(name);
-    var playerRow = args.target.parentNode.cloneNode(true);
-    playerRow.onclick = function (args) {
-        playerRow.remove();
-        selectedTeam.pop(name);
-        updateTeamFoot();
-    }
+    var playerRow = node.cloneNode(true);
+    playerRow.id = `_${name}Team`;
+    playerRow.classList.remove(...playerRow.classList);
+    playerRow.onclick = removePlayerFromTeamClick;
+    // node.children[0].onclick = removePlayerFromTeamClick; // TODO make this work
+
     document.querySelector('#selectedTeamTableBody').appendChild(playerRow);
     updateTeamFoot();
+    updatePlayerTable();
 }
 
 window.addEventListener('load', async () => {
@@ -105,8 +178,8 @@ window.addEventListener('load', async () => {
         tableHeaders.push('name');
         tableHeaders.push('cost');
         tableHeaders.push('playerLevel');
-        tableHeaders.push('teamRank');
         tableHeaders.push('teamName');
+        tableHeaders.push('teamRank');
 
         forEach(data['moneyDraftData']['teams'][0]['players'][0]['playerData']['stats'], function(stat, statName) {
             tableHeaders.push(statName);
@@ -141,7 +214,7 @@ window.addEventListener('load', async () => {
 
         forEach(playerData, function(_, player) {
             row = buildPlayerRow(player);
-            row.children[0].onclick = togglePlayerInTeam;
+            row.children[0].onclick = addPlayerToTeamClick;
             document.querySelector('#playerTableBody').appendChild(row);
         });
 
@@ -149,4 +222,31 @@ window.addEventListener('load', async () => {
         sorttable.makeSortable(document.querySelector('#selectedTeamTable'));
     })
 }, false);
+
+function readTeam(fantasyPlayer) {
+    fetch('{{ url_for("team") }}', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        mode: "no-cors",
+        origin: null,
+        referrerPolicy: "no-referrer",
+        body: JSON.stringify({
+            "event": "{{ event }}",
+            "league": "{{ league }}",
+            "fantasyPlayer": fantasyPlayer,
+        })
+    }).then(function(resp) {
+        var ret = resp.json();
+        return ret;
+    }).then(function(data) {
+        forEach(selectedTeam, function(player) { 
+            removePlayerFromTeam(player);
+        })
+        forEach(data['teamOverviewPlayers'], function(player) {
+            addPlayerToTeam(document.querySelector(`#_${player['player']['name']}`));
+        });
+    });
+}
 </script>
