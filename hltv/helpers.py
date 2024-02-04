@@ -152,6 +152,13 @@ def get_data():
             
         return ret
 
+def get_team_params(event_id, player):
+    with sqlite3.connect(DB) as con:
+        ret = {}
+        cur = con.cursor()
+        data = cur.execute('''select event_id, league_id, team_id from points where event_id=? and player=?''', (event_id, player)).fetchone()
+        return data
+
 def add_team(player, link):
     m = re.match(HLTV_FANTASY_SINGLE_TEAM_RE, link)
     assert m, 'invalid link'
