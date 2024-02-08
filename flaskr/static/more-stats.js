@@ -100,6 +100,10 @@ forLoop = async _ => {
                       collect2[playerName]['3-kd_ratio'] = parseFloat(stats2[5].trim());
                       collect2[playerName]['3-rating'] = parseFloat(stats2[6].trim());
                     }
+
+                    if (!!window.opener) {
+                        window.opener.postMessage(collect2, '*');
+                    }
                 });
             });
 

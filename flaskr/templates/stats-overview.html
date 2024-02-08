@@ -239,16 +239,20 @@ function collectMoreStats() {
 }
 
 function moreStatsHandler(event) {
-    console.log(event);
+    // console.log(event);
     // window.removeEventListener("message", moreStatsHandler);
     document.querySelector('#moreStatsInstructions').innerHTML = '';
     forEach(event.data, function(stats, playerName) {
+        if (!(playerName in playerData)) {
+            console.debug(`${playerName} not in playerData`);
+            continue;
+        }
         playerData[playerName] = {...playerData[playerName], ...stats};
         playerData[playerName]['1-3-rDiff'] = (playerData[playerName]['1-rating'] - playerData[playerName]['3-rating']).toFixed(2);
     });
     localStorage.setItem('https://www.hltv.org/fantasy/{{event}}/overview', JSON.stringify(playerData));
     buildPlayerTable();
-    document.querySelector('#moreStatsStatus').innerHTML = 'Additional stats received and added!';
+    document.querySelector('#moreStatsStatus').innerHTML = 'Additional stats coming in!';
 }
 
 function buildPlayerTable() {
@@ -323,35 +327,6 @@ window.addEventListener('load', async () => {
     buildPlayerTable();
     window.addEventListener("message", moreStatsHandler, false);
 }, false);
-
-
-
-
-// // transfers sessionStorage from one tab to another
-// var sessionStorage_transfer = function(event) {
-//     console.log('Session storage event!');
-//   if(!event) { event = window.event; } // ie suq
-//   if(!event.newValue) return;          // do nothing if no value to work with
-//   if (event.key == 'getSessionStorage') {
-//     // another tab asked for the sessionStorage -> send it
-//     localStorage.setItem('sessionStorage', JSON.stringify(sessionStorage));
-//     // the other tab should now have it, so we're done with it.
-//     localStorage.removeItem('sessionStorage'); // <- could do short timeout as well.
-//   } else if (event.key == 'sessionStorage' && !sessionStorage.length) {
-//     // another tab sent data <- get it
-//     var data = JSON.parse(event.newValue);
-//     for (var key in data) {
-//       sessionStorage.setItem(key, data[key]);
-//     }
-//   }
-// };
-
-// listen for changes to localStorage
-// if(window.addEventListener) {
-//   window.addEventListener("storage", sessionStorage_transfer, false);
-// } else {
-//   window.attachEvent("onstorage", sessionStorage_transfer);
-// };
 
 </script>
 
