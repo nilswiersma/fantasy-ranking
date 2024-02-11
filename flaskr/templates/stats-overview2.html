@@ -5,7 +5,8 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <ul>
-    <li>Click to <button onclick="copyCode()">Copy!</button> some code</li>
+    <!-- <li>Click to <button onclick="copyCode()">Copy!</button> some code</li> -->
+    <li>Copy the code behind <b><u><a href="{{ url_for('static', filename='more-stats3.js') }}">this link</a></u></b></li>
     <li>Paste code into console of this <button onclick="statsPop()">Pop!</button> window</li>
     <li>Push buttons below to retreive some stats</li>
     <li>
@@ -412,11 +413,11 @@ function timeFilterFormat(date) {
     return date.toISOString().split('T')[0];
 }
 
-function copyCode() {
-    fetch(`{{ url_for('static', filename='more-stats3.js') }}`)
-    .then((resp) => resp.text())
-    .then((script) => {navigator.clipboard.writeText(script); setStatus('code copied!')});
-}
+// function copyCode() {
+//     fetch(`{{ url_for('static', filename='more-stats3.js') }}`)
+//     .then((resp) => resp.text())
+//     .then((script) => {navigator.clipboard.writeText(script); setStatus('code copied!')});
+// }
 
 function statsPop() {
     statsPopup = window.open(`https://www.hltv.org/fantasy/{{event}}/overview`, 'statsPopup');
