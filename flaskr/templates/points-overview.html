@@ -44,10 +44,10 @@
                 <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/overview">{{ event[1] }}</a> 
                 {% if data[0] %}
                 <!-- <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/{{ data[0][1] }}/join/json">📈</a> -->
-                <a target="_blank" rel="noopener noreferrer" href="{{ url_for('stats') }}?event={{ event[0] }}&league={{ data[0][1] }}">📈</a>
+                <a target="_blank" rel="noopener noreferrer" href="{{ url_for('stats2') }}?event={{ event[0] }}&league={{ data[0][1] }}">📈</a>
                 {% elif data[1] %}
                 <!-- <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event[0] }}/leagues/{{ data[1][1] }}/join/json">📈</a> -->
-                <a target="_blank" rel="noopener noreferrer" href="{{ url_for('stats') }}?event={{ event[0] }}&league={{ data[1][1] }}">📈</a>
+                <a target="_blank" rel="noopener noreferrer" href="{{ url_for('stats2') }}?event={{ event[0] }}&league={{ data[1][1] }}">📈</a>
                 {% endif %}
             </th>
             <th align="left">Points</th>
