@@ -1,0 +1,571 @@
+<!doctype html>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="{{ url_for('static', filename='sorttable.js') }}"></script>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<ul>
+    <li>Click to <button onclick="copyCode()">Copy!</button> some code</li>
+    <li>Paste code into console of this <button onclick="statsPop()">Pop!</button> window</li>
+    <li>Push buttons below to retreive some stats</li>
+    <li>
+        <button onclick="clearCache()">clear cache</button>
+        <button onclick="getMoneyStats({{event}}, {{league}})">money stats</button>
+        <button onclick="getPlayerStats(1)">last month</button>
+        <button onclick="getPlayerStats(3)">last 3 months</button>
+        <!-- <button onclick="buildTables()">update tables</button> -->
+    </li>
+    <li>
+        <button onclick="readTeam('nils')">Read team Nils</button>
+        <button onclick="readTeam('eric')">Read team Eric</button>
+        <button onclick="toggleHideUnselectable()">Toggle unselectable</button>
+    </li>
+    <li>Budget remaining: <span id="selectedTeamBudgetInfo"></span></li>
+</ul>
+
+<div id="statsStatus"></div>
+
+<table id="selectedTeamTable" class="statsTable">
+    <!-- <tfoot id="selectedTeamTableFoot"><tr>
+        <td><b>budget:</b></td>
+        <td colspan="2"><span id="teamCost">0</span> / <span id="budgetLeft">0</span></td>
+        <td><b>avgs:</b></td>
+    </tr></tfoot> -->
+</table>
+
+<br/>
+
+<table id="playerTable" class="statsTable">
+    <thead></thead>
+    <tbody></tbody>
+</table>
+
+<script>
+
+var statsPopup = null;
+var statsPopupPinged = false;
+var cmdStatus = {};
+var statsCounter = 0;
+var playerDataMoney = {};
+var playerDataMore = {};
+
+var selectedTeam = [];
+var unselectableHidden = false;
+
+const selectedTeamBudget = 1000000;
+
+const headers = {
+  'moneyData': [
+    "name",
+    "cost",
+    "teamName",
+    "teamRank",
+    "ctRating",
+    "tRating",
+    "awpKillsPerRound",
+    "hsPercentage",
+    "entryFragsPerRound",
+    "cluthesPerRound",
+    "supportRounds",
+    "multiKillRounds",
+    "dpr",
+  ],
+  'moreData': [
+    "Maps",
+    "Rounds",
+    "K-D Diff", // funny " " character
+    "K/D",
+    "Rating2.0",
+  ],
+  'keyFigures': [
+        {
+            'header': 'name',
+            'f': function(player, event, filter1, filter3) { return player }
+        },
+        {
+            'header': 'teamName',
+            'f': function(player, event, filter1, filter3) { return player in playerDataMoney && event in playerDataMoney[player] ? playerDataMoney[player][event]['teamName'] : '' }
+        },
+        {
+            'header': 'cost',
+            'f': function(player, event, filter1, filter3) { return player in playerDataMoney && event in playerDataMoney[player] ? playerDataMoney[player][event]['cost'] : '' }
+        },
+        {
+            'header': 'r1',
+            'f': function(player, event, filter1, filter3) { return player in playerDataMore && filter1 in playerDataMore[player] ? playerDataMore[player][filter1]['Rating2.0'] : '' }
+        },
+        {
+            'header': 'r3',
+            'f': function(player, event, filter1, filter3) { return player in playerDataMore && filter3 in playerDataMore[player] ? playerDataMore[player][filter3]['Rating2.0'] : '' }
+        },
+        {
+            'header': 'r1->r3',
+            'f': function(player, event, filter1, filter3) { return player in playerDataMore && filter1 in playerDataMore[player] && filter3 in playerDataMore[player] ? (playerDataMore[player][filter1]['Rating2.0'] - playerDataMore[player][filter3]['Rating2.0']).toFixed(2) : '' }
+        },
+        {
+            'header': 'r1/$',
+            'f': function(player, event, filter1, filter3) { return player in playerDataMore && filter1 in playerDataMore[player] && filter3 in playerDataMore[player] ? (100000 * playerDataMore[player][filter1]['Rating2.0'] / playerDataMoney[player][event]['cost']).toFixed(4) : '' }
+        },
+        {
+            'header': 'r3/$',
+            'f': function(player, event, filter1, filter3) { return player in playerDataMore && filter1 in playerDataMore[player] && filter3 in playerDataMore[player] ? (100000 * playerDataMore[player][filter3]['Rating2.0'] / playerDataMoney[player][event]['cost']).toFixed(4) : '' }
+        },
+    ]
+}
+
+const fantasyInfo = {
+    'eventId': {{ event }},
+    'leagueId': {{ league }}
+};
+
+function clearCache() {
+    sessionStorage.clear();
+}
+
+function applyHideUnselectable() {
+    forEach(document.querySelectorAll('.playerUnselectable'), function(node) { 
+        node.hidden = unselectableHidden;
+    }); 
+}
+
+function toggleHideUnselectable() {
+    unselectableHidden = !unselectableHidden;
+    applyHideUnselectable();
+}
+
+function buildSelectedTeamTable() {
+    document.querySelector('#selectedTeamTable').innerHTML = '';
+    document.querySelector('#selectedTeamTable').innerHTML = '<thead></thead><tbody></tbody><tfoot></tfoot>';
+
+    forEach(Array.from(document.querySelector('#playerTable').querySelector('thead').children), function(headerRow) {
+        document.querySelector('#selectedTeamTable').querySelector('thead')
+        .appendChild(headerRow.cloneNode(true));
+    });
+
+    forEach(selectedTeam, function(player) {
+        let playerRow = document.querySelector(`#_${player}`).cloneNode(true);
+        playerRow.id = `_${player}Team`;
+        playerRow.classList.remove(...playerRow.classList);
+        playerRow.children[0].onclick = removePlayerFromTeamClick;
+        document.querySelector('#selectedTeamTable').querySelector('tbody')
+        .appendChild(playerRow);
+    });
+
+    let teamCounters = selectedTeam
+    .map((player) => playerDataMoney[player][JSON.stringify(fantasyInfo)]['teamName'])
+    .reduce((acc, teamName) => { return teamName in acc ? acc[teamName] += 1 : acc[teamName] = 1, acc}, {});
+    let teamCost = selectedTeam
+    .reduce((acc, player) => { return acc + playerDataMoney[player][JSON.stringify(fantasyInfo)]['cost'] }, 0);
+
+    forEach(Array.from(document.querySelector('#playerTable').querySelector('tbody').children), function(playerRow) {
+        let player = playerRow.id.replace('_', '');
+        playerRow.classList.remove(...playerRow.classList);
+        playerRow.hidden = false;
+        if (selectedTeam.includes(player)) {
+            playerRow.classList.add('playerSelected');
+            return;
+        }
+        if (selectedTeam.length >= 5 && !selectedTeam.includes(player)) {
+            playerRow.classList.add('playerUnselectable');
+            return;
+        }
+        if (teamCounters[playerDataMoney[player][JSON.stringify(fantasyInfo)]['teamName']] >= 2) {
+            playerRow.classList.add('playerUnselectable');
+            return;
+        }
+        if (teamCost + playerDataMoney[player][JSON.stringify(fantasyInfo)]['cost'] > selectedTeamBudget) {
+            playerRow.classList.add('playerUnselectable');
+            return;
+        }
+    });
+
+    document.querySelector('#selectedTeamBudgetInfo').innerText = `${selectedTeamBudget - teamCost} / ${selectedTeamBudget}`;
+    applyHideUnselectable();
+    sorttable.makeSortable(document.querySelector('#selectedTeamTable'));
+}
+
+function removePlayerFromTeamClick(args) {
+    removePlayerFromTeam(args.target.parentNode.id.replace('Team', '').replace('_', ''));
+}
+
+function removePlayerFromTeam(name) {
+    selectedTeam.splice(selectedTeam.indexOf(name), 1);
+    buildSelectedTeamTable();
+}
+
+function addPlayerToTeamClick(args) {
+    addPlayerToTeam(args.target.parentNode.id.replace('_', ''));
+}
+
+function addPlayerToTeam(player) {
+    if (!(player in playerDataMoney)) {
+        console.warn('missing playerDataMoney');
+        return
+    }
+    if (selectedTeam.length >= 5) {
+        console.log('already 5 players in team');
+        return;
+    }
+    if (selectedTeam.includes(player)) {
+        console.log(`${player} already in team`);
+        return;
+    }
+    // check if there are already two players with the same team in selectedTeam
+    var teamName = playerDataMoney[player][JSON.stringify(fantasyInfo)]['teamName'];
+    var teamCtr = 0;
+    forEach(selectedTeam, function(name2) {
+        if (playerDataMoney[name2][JSON.stringify(fantasyInfo)]['teamName'] == teamName) {
+            teamCtr += 1;
+        }
+    });
+    if (teamCtr == 2) {
+        console.log(`already 2 players from ${teamName} in team`);
+        return;
+    }
+    selectedTeam.push(player);
+    buildSelectedTeamTable();
+}
+
+function readTeam(fantasyPlayer) {
+    fetch('{{ url_for("team") }}', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        mode: "no-cors",
+        origin: null,
+        referrerPolicy: "no-referrer",
+        body: JSON.stringify({
+            "event": fantasyInfo.eventId,
+            "league": fantasyInfo.fantasyId,
+            "fantasyPlayer": fantasyPlayer,
+        })
+    })
+    .then((resp) => resp.json())
+    .then(function(data) {
+        selectedTeam = [];
+        // document.querySelector('#selectedTeamTableBody').innerHTML = '';
+        // forEach(selectedTeam, function(player) { 
+        //     removePlayerFromTeam(player);
+        // })
+        forEach(data['teamOverviewPlayers'], function(player) {
+            // console.log(player);
+            addPlayerToTeam(player['player']['name']);
+        });
+        buildSelectedTeamTable();
+    });
+}
+
+
+
+
+
+
+
+
+function addKeyFigures(row, player) { 
+    // TODO less hardcoding
+    let event = JSON.stringify(fantasyInfo);
+    let until = new Date();
+    let from1 = new Date();
+    from1.setMonth(from1.getMonth() - 1);
+    let from3 = new Date();
+    from3.setMonth(from3.getMonth() - 3);
+    let filter1 = JSON.stringify({
+        'startDate': timeFilterFormat(from1),
+        'endDate': timeFilterFormat(until),
+        'minMapCount': 0,
+    });
+    let filter3 = JSON.stringify({
+        'startDate': timeFilterFormat(from3),
+        'endDate': timeFilterFormat(until),
+        'minMapCount': 0,
+    });
+
+    forEach(headers['keyFigures'], function(header) {
+        let cell = document.createElement("td");
+        cell.innerText = header.f(player, event, filter1, filter3);
+        cell.setAttribute('data-source', 'keyFigures');
+        cell.setAttribute('data-key', null);
+        row.appendChild(cell);
+    });
+}
+
+function addMoneyData(row, data, key, headers) {
+    // forEach(data[key], function(value) {
+    forEach(headers, function(header) {
+        let cell = document.createElement("td");
+        // cell.innerText = value;
+        cell.innerText = data[key][header];
+        cell.setAttribute('data-source', 'playerDataMoney');
+        cell.setAttribute('data-key', key);
+        row.appendChild(cell);
+    });
+}
+
+function addMoreData(row, data, key, headers) {
+    // forEach(data[key], function(value, key) {
+    forEach(headers, function(header) {
+        let cell = document.createElement("td");
+        // cell.innerText = value;
+        cell.innerText = data[key][header];
+        cell.setAttribute('data-source', 'playerDataMore');
+        cell.setAttribute('data-key', key);
+        row.appendChild(cell);
+    });
+}
+
+function buildPlayerTable() {
+    // let headers = {};
+
+    document.querySelector('#playerTable').innerHTML = '';
+    document.querySelector('#playerTable').innerHTML = '<thead></thead><tbody></tbody>';
+
+
+    forEach(playerDataMoney, function(data, player) {
+        let row = document.createElement("tr");
+        row.id = `_${player}`; // in case name starts with a number
+
+        addKeyFigures(row, player);
+
+        if (!(JSON.stringify(fantasyInfo) in data)) {
+            console.warn(`no event data for ${player}`);
+        } else {
+            // if (!('playerDataMoney' in headers)) {
+            //     headers['playerDataMoney'] = Object.keys(playerDataMoney[Object.keys(playerDataMoney)[0]][Object.keys(playerDataMoney[Object.keys(playerDataMoney)[0]])[0]]);
+            // }
+            addMoneyData(row, data, JSON.stringify(fantasyInfo), headers['moneyData']);
+        }
+        if (!(player in playerDataMore)) {
+            console.warn(`no more data for ${player}`);
+        } else {
+            let until = new Date();
+            forEach([1,3], function(periodMonths) {
+                let from = new Date();
+                from.setMonth(from.getMonth() - periodMonths);
+                let filter = {
+                    'startDate': timeFilterFormat(from),
+                    'endDate': timeFilterFormat(until),
+                    'minMapCount': 0,
+                }
+                
+                // if (!(JSON.stringify(filter) in headers)) {
+                //     headers[JSON.stringify(filter)] = Object.keys(playerDataMore[Object.keys(playerDataMore)[0]][Object.keys(playerDataMore[Object.keys(playerDataMore)[0]])[0]]);
+                // }
+
+                if (!(JSON.stringify(filter) in playerDataMore[player])) {
+                    console.warn(`no more data for ${player} with filter ${JSON.stringify(filter)}`);
+                } else {
+                    addMoreData(row, playerDataMore[player], JSON.stringify(filter), headers['moreData']);
+                }
+            })
+        }
+        
+        row.children[0].onclick = addPlayerToTeamClick;
+        document.querySelector('#playerTable').querySelector('tbody').appendChild(row);
+    });
+
+    console.log(headers);
+
+    let row1 = document.createElement("tr");
+    let row2 = document.createElement("tr");
+
+    {
+        let colspan = headers['keyFigures'].length;
+        let cell1 = document.createElement("th");
+        cell1.setAttribute('colspan', colspan);
+        cell1.innerText = 'keyFigures';
+        row1.append(cell1);
+
+        forEach(headers['keyFigures'], function(header2) {
+            let cell = document.createElement("th");
+            cell.innerText = header2.header;
+            row2.appendChild(cell);
+        });
+    }
+
+    forEach({
+        'fantasyStats': headers['moneyData'],
+        '1 month': headers['moreData'],
+        '3 month': headers['moreData'],
+    }, function(headers2, header1) {
+        console.log(JSON.stringify(headers));
+        let colspan = headers2.length;
+        let cell = document.createElement("th");
+        cell.setAttribute('colspan', colspan);
+        cell.innerText = header1;
+        row1.appendChild(cell);
+        forEach(headers2, function(header2) {
+            let cell = document.createElement("th");
+            cell.innerText = header2;
+            row2.appendChild(cell);
+        });
+    });
+
+    document.querySelector('#playerTable').querySelector('thead').appendChild(row1);
+    document.querySelector('#playerTable').querySelector('thead').appendChild(row2);
+
+    sorttable.makeSortable(document.querySelector('#playerTable'));
+}
+
+function timeFilterFormat(date) {
+    return date.toISOString().split('T')[0];
+}
+
+function copyCode() {
+    fetch(`{{ url_for('static', filename='more-stats3.js') }}`)
+    .then((resp) => resp.text())
+    .then((script) => {navigator.clipboard.writeText(script); setStatus('code copied!')});
+}
+
+function statsPop() {
+    statsPopup = window.open(`https://www.hltv.org/fantasy/{{event}}/overview`, 'statsPopup');
+    setStatus('pop up poened, waiting for ping!')
+}
+
+function setStatus(status) {
+    document.querySelector('#statsStatus').innerHTML = status;
+}
+
+function getPlayerStats(periodMonths) {
+    let until = new Date();
+    let from = new Date();
+    setStatus('requested some stats!');
+    from.setMonth(from.getMonth() - periodMonths);
+    cmdStatus['getPlayerStats'] = 'requested';
+    statsPopup.postMessage({
+        'cmd': 'getPlayerStats',
+        'filter': {
+            'startDate': timeFilterFormat(from),
+            'endDate': timeFilterFormat(until),
+            'minMapCount': 0,
+        }
+    }, '*');
+}
+
+function getMoneyStats(eventId, leagueId) {
+    setStatus('requested some stats!');
+    cmdStatus['getMoneyStats'] = 'requested';
+    statsPopup.postMessage({
+        'cmd': 'getMoneyStats',
+        'fantasyInfo': {
+            'eventId': eventId,
+            'leagueId': leagueId
+        }
+    }, '*');
+}
+
+function parsePlayerStatsMore(html, filter) {
+    let parser = new DOMParser();
+    let parsed = parser.parseFromString(html, 'text/html');
+    // console.log(parsed);
+
+    let keys = Array.from(parsed.querySelector('.player-ratings-table').querySelector('thead').querySelectorAll('th'))
+    .map((head) => head.innerText);
+    
+    Array.from(parsed.querySelector('.player-ratings-table').querySelector('tbody').querySelectorAll('tr'))
+    .forEach(function(player_row, k){
+        let stats = Array.from(player_row.querySelectorAll('td'))
+        .map((td, idx) => {
+            return [keys[idx], td.innerText == "" ? td.getAttribute('data-sort') : td.innerText];
+        });
+        stats.push(['startDate', filter['startDate']]);
+        stats.push(['endDate', filter['endDate']]);
+
+        stats = Object.fromEntries(stats);
+
+        let playerName = stats['Player'];
+        if (!(playerName in playerDataMore)) {
+            playerDataMore[playerName] = {};
+        }
+        playerDataMore[playerName][JSON.stringify(filter)] = stats;
+    });
+
+    sessionStorage.setItem('playerDataMore', JSON.stringify(playerDataMore));
+}
+
+function parsePlayerMoneyStats(json, fantasyInfo) {
+    // console.log(json);
+    forEach(json, function(team) {
+        forEach(team['players'], function(player) {
+            let playerName = player['playerData']['name'];
+            if (!(playerName in playerDataMoney)) {
+                playerDataMoney[playerName] = {};
+            }
+
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)] = player['playerData']['stats'];
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['name'] = playerName;
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['cost'] = player['cost'];
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['playerLevel'] = player['playerData']['playerLevel'] ? player['playerData']['playerLevel'] : 'BRONZE';
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['teamRank'] = team['rank'];
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['teamName'] = team['teamData']['name'];
+        });
+    });
+
+    sessionStorage.setItem('playerDataMoney', JSON.stringify(playerDataMoney));
+}
+
+function statsMessageHandler(event) {
+    // console.log(event);
+
+    if (event.origin != 'https://www.hltv.org') {
+        console.error(`not expecting messages from ${event.origin}`);
+        return;
+    }
+
+    let resp = event.data;
+
+    if (resp.cmd == 'ping') {
+        setStatus('ping received');
+        statsPopupPinged = true;
+    } else if (resp.cmd == 'getPlayerStats') {
+        cmdStatus['getPlayerStats'] = resp.status;
+        if (resp.status == 'holdoff') {
+            setStatus('hold off for a bit');
+        } else if (resp.status == 'ok') {
+            statsCounter += 1;
+            setStatus(`got ${statsCounter} stats!`);
+            parsePlayerStatsMore(resp.playerStatsHtml, resp.filter);
+            buildTables();
+        }
+    } else if (resp.cmd == 'getMoneyStats') {
+        cmdStatus['getMoneyStats'] = resp.status;
+        if (resp.status == 'holdoff') {
+            setStatus('hold off for a bit');
+        } else if (resp.status == 'ok') {
+            statsCounter += 1;
+            setStatus(`got ${statsCounter} stats reply!`);
+            parsePlayerMoneyStats(resp.playerStatsJson, resp.fantasyInfo);
+            buildTables();
+        }
+    }
+}
+
+function buildTables() {
+    buildPlayerTable()
+    buildSelectedTeamTable()
+}
+
+// look for previously opened windows
+// statsPopup = window.open(`https://www.hltv.org/fantasy/{{event}}/overview`, 'statsPopup');
+// if (!!statsPopup) {
+//     console.log('found previous statsPopup');
+// }
+
+// check session storage for cached data
+playerDataMore = JSON.parse(sessionStorage.getItem('playerDataMore'));
+if (playerDataMore === null) {
+    playerDataMore = {};
+}
+playerDataMoney = JSON.parse(sessionStorage.getItem('playerDataMoney'));
+if (playerDataMoney === null) {
+    playerDataMoney = {};
+}
+
+buildTables();
+
+setStatus('waiting for ping!');
+window.addEventListener("message", statsMessageHandler, false);
+
+</script>
+

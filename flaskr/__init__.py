@@ -53,7 +53,16 @@ def create_app():
             event = request.args.get('event')
             league = request.args.get('league')
             return render_template('stats-overview.html', event=event, league=league)
-    
+
+    @app.route("/stats2", methods=('GET', 'POST'))
+    def stats2():
+        if request.method == 'POST':
+            return 'ok'
+        else:
+            event = request.args.get('event')
+            league = request.args.get('league')
+            return render_template('stats-overview2.html', event=event, league=league)
+
     @app.route("/team", methods=('POST',))
     def team():
         if request.method == 'POST':
