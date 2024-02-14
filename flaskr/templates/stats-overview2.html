@@ -3,6 +3,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <script src="{{ url_for('static', filename='sorttable.js') }}"></script>
 
+<script src='{{ url_for('static', filename='plotly-2.27.0.min.js') }}'></script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <ul>
     <!-- <li>Click to <button onclick="copyCode()">Copy!</button> some code</li> -->
@@ -41,8 +43,19 @@
     <tbody></tbody>
 </table>
 
-<script>
+<br/>
+X: <select id="XColSelect">
+</select>
 
+Y: <select id="YColSelect">
+</select>
+
+<button onclick="updatePlot()">Plot!</button>
+<br/>
+
+<div id="plotDiv"></div>
+
+<script id="globals">
 var statsPopup = null;
 var statsPopupPinged = false;
 var cmdStatus = {};
@@ -118,11 +131,181 @@ const fantasyInfo = {
     'eventId': {{ event }},
     'leagueId': {{ league }}
 };
+</script>
 
+<script id="utils">
 function clearCache() {
     sessionStorage.clear();
 }
 
+function timeFilterFormat(date) {
+    return date.toISOString().split('T')[0];
+}
+
+// function copyCode() {
+//     fetch(`{{ url_for('static', filename='more-stats3.js') }}`)
+//     .then((resp) => resp.text())
+//     .then((script) => {navigator.clipboard.writeText(script); setStatus('code copied!')});
+// }
+</script>
+
+<script id="dataScripts">
+
+function statsPop() {
+    statsPopup = window.open(`https://www.hltv.org/`, 'statsPopup');
+    setStatus('pop up opened, waiting for ping!')
+}
+
+function readTeam(fantasyPlayer) {
+    fetch('{{ url_for("team") }}', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        mode: "no-cors",
+        origin: null,
+        referrerPolicy: "no-referrer",
+        body: JSON.stringify({
+            "event": fantasyInfo.eventId,
+            "league": fantasyInfo.fantasyId,
+            "fantasyPlayer": fantasyPlayer,
+        })
+    })
+    .then((resp) => resp.json())
+    .then(function(data) {
+        selectedTeam = [];
+        // document.querySelector('#selectedTeamTableBody').innerHTML = '';
+        // forEach(selectedTeam, function(player) { 
+        //     removePlayerFromTeam(player);
+        // })
+        forEach(data['teamOverviewPlayers'], function(player) {
+            // console.log(player);
+            addPlayerToTeam(player['player']['name']);
+        });
+        buildSelectedTeamTable();
+    });
+}
+
+function setStatus(status) {
+    document.querySelector('#statsStatus').innerHTML = status;
+}
+
+function getPlayerStats(periodMonths) {
+    let until = new Date();
+    let from = new Date();
+    setStatus('requested some stats!');
+    from.setMonth(from.getMonth() - periodMonths);
+    cmdStatus['getPlayerStats'] = 'requested';
+    statsPopup.postMessage({
+        'cmd': 'getPlayerStats',
+        'filter': {
+            'startDate': timeFilterFormat(from),
+            'endDate': timeFilterFormat(until),
+            'minMapCount': 0,
+        }
+    }, '*');
+}
+
+function getMoneyStats(eventId, leagueId) {
+    setStatus('requested some stats!');
+    cmdStatus['getMoneyStats'] = 'requested';
+    statsPopup.postMessage({
+        'cmd': 'getMoneyStats',
+        'fantasyInfo': {
+            'eventId': eventId,
+            'leagueId': leagueId
+        }
+    }, '*');
+}
+
+function parsePlayerStatsMore(html, filter) {
+    let parser = new DOMParser();
+    let parsed = parser.parseFromString(html, 'text/html');
+    // console.log(parsed);
+
+    let keys = Array.from(parsed.querySelector('.player-ratings-table').querySelector('thead').querySelectorAll('th'))
+    .map((head) => head.innerText);
+    
+    Array.from(parsed.querySelector('.player-ratings-table').querySelector('tbody').querySelectorAll('tr'))
+    .forEach(function(player_row, k){
+        let stats = Array.from(player_row.querySelectorAll('td'))
+        .map((td, idx) => {
+            return [keys[idx], td.innerText == "" ? td.getAttribute('data-sort') : td.innerText];
+        });
+        stats.push(['startDate', filter['startDate']]);
+        stats.push(['endDate', filter['endDate']]);
+
+        stats = Object.fromEntries(stats);
+
+        let playerName = stats['Player'];
+        if (!(playerName in playerDataMore)) {
+            playerDataMore[playerName] = {};
+        }
+        playerDataMore[playerName][JSON.stringify(filter)] = stats;
+    });
+
+    sessionStorage.setItem('playerDataMore', JSON.stringify(playerDataMore));
+}
+
+function parsePlayerMoneyStats(json, fantasyInfo) {
+    // console.log(json);
+    forEach(json, function(team) {
+        forEach(team['players'], function(player) {
+            let playerName = player['playerData']['name'];
+            if (!(playerName in playerDataMoney)) {
+                playerDataMoney[playerName] = {};
+            }
+
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)] = player['playerData']['stats'];
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['name'] = playerName;
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['cost'] = player['cost'];
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['playerLevel'] = player['playerData']['playerLevel'] ? player['playerData']['playerLevel'] : 'BRONZE';
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['teamRank'] = team['rank'];
+            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['teamName'] = team['teamData']['name'];
+        });
+    });
+
+    sessionStorage.setItem('playerDataMoney', JSON.stringify(playerDataMoney));
+}
+
+function statsMessageHandler(event) {
+    // console.log(event);
+
+    if (event.origin != 'https://www.hltv.org') {
+        console.error(`not expecting messages from ${event.origin}`);
+        return;
+    }
+
+    let resp = event.data;
+
+    if (resp.cmd == 'ping') {
+        setStatus('ping received');
+        statsPopupPinged = true;
+    } else if (resp.cmd == 'getPlayerStats') {
+        cmdStatus['getPlayerStats'] = resp.status;
+        if (resp.status == 'holdoff') {
+            setStatus('hold off for a bit');
+        } else if (resp.status == 'ok') {
+            statsCounter += 1;
+            setStatus(`got ${statsCounter} stats!`);
+            parsePlayerStatsMore(resp.playerStatsHtml, resp.filter);
+            buildTables();
+        }
+    } else if (resp.cmd == 'getMoneyStats') {
+        cmdStatus['getMoneyStats'] = resp.status;
+        if (resp.status == 'holdoff') {
+            setStatus('hold off for a bit');
+        } else if (resp.status == 'ok') {
+            statsCounter += 1;
+            setStatus(`got ${statsCounter} stats reply!`);
+            parsePlayerMoneyStats(resp.playerStatsJson, resp.fantasyInfo);
+            buildTables();
+        }
+    }
+}
+</script>
+
+<script id="tableScripts">
 function applyHideUnselectable() {
     forEach(document.querySelectorAll('.playerUnselectable'), function(node) { 
         node.hidden = unselectableHidden;
@@ -226,43 +409,6 @@ function addPlayerToTeam(player) {
     selectedTeam.push(player);
     buildSelectedTeamTable();
 }
-
-function readTeam(fantasyPlayer) {
-    fetch('{{ url_for("team") }}', {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        mode: "no-cors",
-        origin: null,
-        referrerPolicy: "no-referrer",
-        body: JSON.stringify({
-            "event": fantasyInfo.eventId,
-            "league": fantasyInfo.fantasyId,
-            "fantasyPlayer": fantasyPlayer,
-        })
-    })
-    .then((resp) => resp.json())
-    .then(function(data) {
-        selectedTeam = [];
-        // document.querySelector('#selectedTeamTableBody').innerHTML = '';
-        // forEach(selectedTeam, function(player) { 
-        //     removePlayerFromTeam(player);
-        // })
-        forEach(data['teamOverviewPlayers'], function(player) {
-            // console.log(player);
-            addPlayerToTeam(player['player']['name']);
-        });
-        buildSelectedTeamTable();
-    });
-}
-
-
-
-
-
-
-
 
 function addKeyFigures(row, player) { 
     // TODO less hardcoding
@@ -409,143 +555,77 @@ function buildPlayerTable() {
     sorttable.makeSortable(document.querySelector('#playerTable'));
 }
 
-function timeFilterFormat(date) {
-    return date.toISOString().split('T')[0];
-}
-
-// function copyCode() {
-//     fetch(`{{ url_for('static', filename='more-stats3.js') }}`)
-//     .then((resp) => resp.text())
-//     .then((script) => {navigator.clipboard.writeText(script); setStatus('code copied!')});
-// }
-
-function statsPop() {
-    statsPopup = window.open(`https://www.hltv.org/fantasy/{{event}}/overview`, 'statsPopup');
-    setStatus('pop up poened, waiting for ping!')
-}
-
-function setStatus(status) {
-    document.querySelector('#statsStatus').innerHTML = status;
-}
-
-function getPlayerStats(periodMonths) {
-    let until = new Date();
-    let from = new Date();
-    setStatus('requested some stats!');
-    from.setMonth(from.getMonth() - periodMonths);
-    cmdStatus['getPlayerStats'] = 'requested';
-    statsPopup.postMessage({
-        'cmd': 'getPlayerStats',
-        'filter': {
-            'startDate': timeFilterFormat(from),
-            'endDate': timeFilterFormat(until),
-            'minMapCount': 0,
-        }
-    }, '*');
-}
-
-function getMoneyStats(eventId, leagueId) {
-    setStatus('requested some stats!');
-    cmdStatus['getMoneyStats'] = 'requested';
-    statsPopup.postMessage({
-        'cmd': 'getMoneyStats',
-        'fantasyInfo': {
-            'eventId': eventId,
-            'leagueId': leagueId
-        }
-    }, '*');
-}
-
-function parsePlayerStatsMore(html, filter) {
-    let parser = new DOMParser();
-    let parsed = parser.parseFromString(html, 'text/html');
-    // console.log(parsed);
-
-    let keys = Array.from(parsed.querySelector('.player-ratings-table').querySelector('thead').querySelectorAll('th'))
-    .map((head) => head.innerText);
-    
-    Array.from(parsed.querySelector('.player-ratings-table').querySelector('tbody').querySelectorAll('tr'))
-    .forEach(function(player_row, k){
-        let stats = Array.from(player_row.querySelectorAll('td'))
-        .map((td, idx) => {
-            return [keys[idx], td.innerText == "" ? td.getAttribute('data-sort') : td.innerText];
-        });
-        stats.push(['startDate', filter['startDate']]);
-        stats.push(['endDate', filter['endDate']]);
-
-        stats = Object.fromEntries(stats);
-
-        let playerName = stats['Player'];
-        if (!(playerName in playerDataMore)) {
-            playerDataMore[playerName] = {};
-        }
-        playerDataMore[playerName][JSON.stringify(filter)] = stats;
-    });
-
-    sessionStorage.setItem('playerDataMore', JSON.stringify(playerDataMore));
-}
-
-function parsePlayerMoneyStats(json, fantasyInfo) {
-    // console.log(json);
-    forEach(json, function(team) {
-        forEach(team['players'], function(player) {
-            let playerName = player['playerData']['name'];
-            if (!(playerName in playerDataMoney)) {
-                playerDataMoney[playerName] = {};
-            }
-
-            playerDataMoney[playerName][JSON.stringify(fantasyInfo)] = player['playerData']['stats'];
-            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['name'] = playerName;
-            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['cost'] = player['cost'];
-            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['playerLevel'] = player['playerData']['playerLevel'] ? player['playerData']['playerLevel'] : 'BRONZE';
-            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['teamRank'] = team['rank'];
-            playerDataMoney[playerName][JSON.stringify(fantasyInfo)]['teamName'] = team['teamData']['name'];
-        });
-    });
-
-    sessionStorage.setItem('playerDataMoney', JSON.stringify(playerDataMoney));
-}
-
-function statsMessageHandler(event) {
-    // console.log(event);
-
-    if (event.origin != 'https://www.hltv.org') {
-        console.error(`not expecting messages from ${event.origin}`);
-        return;
-    }
-
-    let resp = event.data;
-
-    if (resp.cmd == 'ping') {
-        setStatus('ping received');
-        statsPopupPinged = true;
-    } else if (resp.cmd == 'getPlayerStats') {
-        cmdStatus['getPlayerStats'] = resp.status;
-        if (resp.status == 'holdoff') {
-            setStatus('hold off for a bit');
-        } else if (resp.status == 'ok') {
-            statsCounter += 1;
-            setStatus(`got ${statsCounter} stats!`);
-            parsePlayerStatsMore(resp.playerStatsHtml, resp.filter);
-            buildTables();
-        }
-    } else if (resp.cmd == 'getMoneyStats') {
-        cmdStatus['getMoneyStats'] = resp.status;
-        if (resp.status == 'holdoff') {
-            setStatus('hold off for a bit');
-        } else if (resp.status == 'ok') {
-            statsCounter += 1;
-            setStatus(`got ${statsCounter} stats reply!`);
-            parsePlayerMoneyStats(resp.playerStatsJson, resp.fantasyInfo);
-            buildTables();
-        }
-    }
-}
-
 function buildTables() {
     buildPlayerTable()
     buildSelectedTeamTable()
 }
+</script>
+
+<script id="plotScript">
+function getHeaders() {
+    return Array.from(document
+            .querySelector('#playerTable')
+            .querySelector('thead')
+            .querySelectorAll('tr')[1]
+            .querySelectorAll('th'))
+        .map((th) => th.innerText);
+}
+
+function getDataCol(colIdx) {
+    return Array.from(document
+            .querySelector('#playerTable')
+            .querySelector('tbody')
+            .querySelectorAll('tr'))
+        .map((row) => row.querySelectorAll('td')[colIdx].innerText);
+}
+
+function updatePlot(event) {
+    let xLabel = document.querySelector('#XColSelect').value;
+    let yLabel = document.querySelector('#YColSelect').value;
+    
+    Plotly.newPlot('plotDiv', [{
+        x: getDataCol(getHeaders().indexOf(xLabel)),
+        y: getDataCol(getHeaders().indexOf(yLabel)),
+        mode: 'markers+text',
+        type: 'scatter',
+        name: 'scatterplot',
+        text: getDataCol(0),
+        textposition: 'top center',
+        textfont: {
+            family:  'Raleway, sans-serif'
+        },
+        marker: { 
+            size: 4 
+        } 
+    }], {
+        title: `${xLabel} vs. ${yLabel}`,
+        xaxis: {
+            title: xLabel
+        },
+        yaxis: {
+            title: yLabel
+        },
+        // legend: {
+        //     y: 0.5,
+        //     yref: 'paper',
+        //     font: {
+        //     family: 'Arial, sans-serif',
+        //     size: 20,
+        //     color: 'grey',
+        //     }
+        // },
+    });
+}
+
+function setupDropdown(dropdown, initialValue) {
+    dropdown.innerHTML = getHeaders().map((th) => `<option value="${th}">${th}</option>`);
+    dropdown.value = initialValue;
+    dropdown.addEventListener('change', updatePlot);
+}
+</script>
+    
+
+<script id="onLoad">
 
 // look for previously opened windows
 // statsPopup = window.open(`https://www.hltv.org/fantasy/{{event}}/overview`, 'statsPopup');
@@ -568,5 +648,12 @@ buildTables();
 setStatus('waiting for ping!');
 window.addEventListener("message", statsMessageHandler, false);
 
+setupDropdown(document.querySelector('#YColSelect'), 'r3');
+setupDropdown(document.querySelector('#XColSelect'), 'cost');
+updatePlot();
 </script>
+
+
+
+
 
