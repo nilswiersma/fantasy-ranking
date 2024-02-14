@@ -50,6 +50,12 @@ X: <select id="XColSelect">
 Y: <select id="YColSelect">
 </select>
 
+Color: <select id="CColSelect">
+</select>
+
+Text: <select id="TColSelect">
+</select>
+
 <button onclick="updatePlot()">Plot!</button>
 <br/>
 
@@ -152,8 +158,14 @@ function timeFilterFormat(date) {
 <script id="dataScripts">
 
 function statsPop() {
-    statsPopup = window.open(`https://www.hltv.org/`, 'statsPopup');
-    setStatus('pop up opened, waiting for ping!')
+    statsPopup = window.open('', 'statsPopup');
+    if (!!statsPopup) {
+        console.log('found previous statsPopup');
+        setStatus('previous pop up opened!')
+    } else {
+        statsPopup = window.open(`https://www.hltv.org/`, 'statsPopup');
+        setStatus('pop up opened, waiting for ping!')
+    }
 }
 
 function readTeam(fantasyPlayer) {
@@ -223,10 +235,10 @@ function parsePlayerStatsMore(html, filter) {
     let parsed = parser.parseFromString(html, 'text/html');
     // console.log(parsed);
 
-    let keys = Array.from(parsed.querySelector('.player-ratings-table').querySelector('thead').querySelectorAll('th'))
+    let keys = Array.from(parsed.querySelectorAll('.player-ratings-table thead th'))
     .map((head) => head.innerText);
     
-    Array.from(parsed.querySelector('.player-ratings-table').querySelector('tbody').querySelectorAll('tr'))
+    Array.from(parsed.querySelectorAll('.player-ratings-table tbody tr'))
     .forEach(function(player_row, k){
         let stats = Array.from(player_row.querySelectorAll('td'))
         .map((td, idx) => {
@@ -309,7 +321,7 @@ function statsMessageHandler(event) {
 function applyHideUnselectable() {
     forEach(document.querySelectorAll('.playerUnselectable'), function(node) { 
         node.hidden = unselectableHidden;
-    }); 
+    });
 }
 
 function toggleHideUnselectable() {
@@ -321,9 +333,8 @@ function buildSelectedTeamTable() {
     document.querySelector('#selectedTeamTable').innerHTML = '';
     document.querySelector('#selectedTeamTable').innerHTML = '<thead></thead><tbody></tbody><tfoot></tfoot>';
 
-    forEach(Array.from(document.querySelector('#playerTable').querySelector('thead').children), function(headerRow) {
-        document.querySelector('#selectedTeamTable').querySelector('thead')
-        .appendChild(headerRow.cloneNode(true));
+    forEach(Array.from(document.querySelector('#playerTable thead').children), function(headerRow) {
+        document.querySelector('#selectedTeamTable thead').appendChild(headerRow.cloneNode(true));
     });
 
     forEach(selectedTeam, function(player) {
@@ -331,8 +342,7 @@ function buildSelectedTeamTable() {
         playerRow.id = `_${player}Team`;
         playerRow.classList.remove(...playerRow.classList);
         playerRow.children[0].onclick = removePlayerFromTeamClick;
-        document.querySelector('#selectedTeamTable').querySelector('tbody')
-        .appendChild(playerRow);
+        document.querySelector('#selectedTeamTable tbody').appendChild(playerRow);
     });
 
     let teamCounters = selectedTeam
@@ -341,7 +351,7 @@ function buildSelectedTeamTable() {
     let teamCost = selectedTeam
     .reduce((acc, player) => { return acc + playerDataMoney[player][JSON.stringify(fantasyInfo)]['cost'] }, 0);
 
-    forEach(Array.from(document.querySelector('#playerTable').querySelector('tbody').children), function(playerRow) {
+    forEach(Array.from(document.querySelector('#playerTable tbody').children), function(playerRow) {
         let player = playerRow.id.replace('_', '');
         playerRow.classList.remove(...playerRow.classList);
         playerRow.hidden = false;
@@ -509,7 +519,7 @@ function buildPlayerTable() {
         }
         
         row.children[0].onclick = addPlayerToTeamClick;
-        document.querySelector('#playerTable').querySelector('tbody').appendChild(row);
+        document.querySelector('#playerTable tbody').appendChild(row);
     });
 
     console.log(headers);
@@ -549,8 +559,8 @@ function buildPlayerTable() {
         });
     });
 
-    document.querySelector('#playerTable').querySelector('thead').appendChild(row1);
-    document.querySelector('#playerTable').querySelector('thead').appendChild(row2);
+    document.querySelector('#playerTable thead').appendChild(row1);
+    document.querySelector('#playerTable thead').appendChild(row2);
 
     sorttable.makeSortable(document.querySelector('#playerTable'));
 }
@@ -564,39 +574,53 @@ function buildTables() {
 <script id="plotScript">
 function getHeaders() {
     return Array.from(document
-            .querySelector('#playerTable')
-            .querySelector('thead')
-            .querySelectorAll('tr')[1]
+            .querySelectorAll('#playerTable thead tr')[1]
             .querySelectorAll('th'))
         .map((th) => th.innerText);
 }
 
 function getDataCol(colIdx) {
-    return Array.from(document
-            .querySelector('#playerTable')
-            .querySelector('tbody')
-            .querySelectorAll('tr'))
+    return Array.from(document.querySelectorAll('#playerTable tbody tr:not([hidden])'))
         .map((row) => row.querySelectorAll('td')[colIdx].innerText);
+}
+
+// transform categories to numbers, if needed
+function dataToColor(data) {
+    return isNaN(parseFloat(data[0])) ? 
+        data.map((x) => [...new Set(data)].indexOf(x)) :
+        data.map((x) => parseFloat(x)) ; 
 }
 
 function updatePlot(event) {
     let xLabel = document.querySelector('#XColSelect').value;
     let yLabel = document.querySelector('#YColSelect').value;
+    let cLabel = document.querySelector('#CColSelect').value;
+    let tLabel = document.querySelector('#TColSelect').value;
     
-    Plotly.newPlot('plotDiv', [{
+    Plotly.react('plotDiv', [{
         x: getDataCol(getHeaders().indexOf(xLabel)),
         y: getDataCol(getHeaders().indexOf(yLabel)),
+        customdata: getDataCol(0).map((name, idx) => [
+            name, 
+            getDataCol(getHeaders().indexOf(cLabel))[idx],
+        ]),
         mode: 'markers+text',
         type: 'scatter',
-        name: 'scatterplot',
-        text: getDataCol(0),
+        name: '',
+        hoverinfo: 'all',
+        hovertemplate: 
+            `%{customdata[0]}<br>${xLabel}:%{x}<br>${yLabel}:%{y}<br>${cLabel}:%{customdata[1]}<br>${tLabel}:%{text}`,
+        text: getDataCol(getHeaders().indexOf(tLabel)),
         textposition: 'top center',
         textfont: {
             family:  'Raleway, sans-serif'
         },
         marker: { 
-            size: 4 
-        } 
+            size: 8,
+            color: dataToColor(getDataCol(getHeaders().indexOf(cLabel))),
+            cauto: true,
+            colorbar: {}
+        },
     }], {
         title: `${xLabel} vs. ${yLabel}`,
         xaxis: {
@@ -650,6 +674,8 @@ window.addEventListener("message", statsMessageHandler, false);
 
 setupDropdown(document.querySelector('#YColSelect'), 'r3');
 setupDropdown(document.querySelector('#XColSelect'), 'cost');
+setupDropdown(document.querySelector('#CColSelect'), 'teamName');
+setupDropdown(document.querySelector('#TColSelect'), 'name');
 updatePlot();
 </script>
 
