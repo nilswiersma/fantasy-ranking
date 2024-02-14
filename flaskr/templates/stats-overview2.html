@@ -14,8 +14,10 @@
     <li>
         <button onclick="clearCache()">clear cache</button>
         <button onclick="getMoneyStats({{event}}, {{league}})">money stats</button>
-        <button onclick="getPlayerStats(1)">last month</button>
-        <button onclick="getPlayerStats(3)">last 3 months</button>
+        <button onclick="getPlayerStatsPeriod(1)">last month</button>
+        <button onclick="getPlayerStatsPeriod(3)">last 3 months</button>
+        <input id="eventStatsId" type="text" placeholder="event's statspage id"></input>
+        <button onclick="getPlayerStatsEvent()">event</button>
         <!-- <button onclick="buildTables()">update tables</button> -->
     </li>
     <li>
@@ -100,35 +102,54 @@ const headers = {
   'keyFigures': [
         {
             'header': 'name',
-            'f': function(player, event, filter1, filter3) { return player }
+            'f': function(player, event, filters) { return player }
         },
         {
             'header': 'teamName',
-            'f': function(player, event, filter1, filter3) { return player in playerDataMoney && event in playerDataMoney[player] ? playerDataMoney[player][event]['teamName'] : '' }
+            'f': function(player, event, filters) { return player in playerDataMoney && event in playerDataMoney[player] ? playerDataMoney[player][event]['teamName'] : '' }
         },
         {
             'header': 'cost',
-            'f': function(player, event, filter1, filter3) { return player in playerDataMoney && event in playerDataMoney[player] ? playerDataMoney[player][event]['cost'] : '' }
+            'f': function(player, event, filters) { return player in playerDataMoney && event in playerDataMoney[player] ? playerDataMoney[player][event]['cost'] : '' }
         },
         {
             'header': 'r1',
-            'f': function(player, event, filter1, filter3) { return player in playerDataMore && filter1 in playerDataMore[player] ? playerDataMore[player][filter1]['Rating2.0'] : '' }
+            'f': function(player, event, filters) { return player in playerDataMore && filters.month1 in playerDataMore[player] ? playerDataMore[player][filters.month1]['Rating2.0'] : '' }
         },
         {
             'header': 'r3',
-            'f': function(player, event, filter1, filter3) { return player in playerDataMore && filter3 in playerDataMore[player] ? playerDataMore[player][filter3]['Rating2.0'] : '' }
+            'f': function(player, event, filters) { return player in playerDataMore && filters.month3 in playerDataMore[player] ? playerDataMore[player][filters.month3]['Rating2.0'] : '' }
         },
         {
-            'header': 'r1->r3',
-            'f': function(player, event, filter1, filter3) { return player in playerDataMore && filter1 in playerDataMore[player] && filter3 in playerDataMore[player] ? (playerDataMore[player][filter1]['Rating2.0'] - playerDataMore[player][filter3]['Rating2.0']).toFixed(2) : '' }
+            'header': 're',
+            'f': function(player, event, filters) { return player in playerDataMore && filters.event in playerDataMore[player] ? playerDataMore[player][filters.event]['Rating2.0'] : '' }
+        },
+        {
+            'header': 'r3->r1',
+            'f': function(player, event, filters) { return player in playerDataMore && filters.month1 in playerDataMore[player] && filters.month3 in playerDataMore[player] ? 
+                (playerDataMore[player][filters.month1]['Rating2.0'] - playerDataMore[player][filters.month3]['Rating2.0']).toFixed(2) : '' }
+        },
+        {
+            'header': 'r1->re',
+            'f': function(player, event, filters) { return player in playerDataMore && filters.month1 in playerDataMore[player] && filters.event in playerDataMore[player] ? 
+                (playerDataMore[player][filters.event]['Rating2.0'] - playerDataMore[player][filters.month1]['Rating2.0']).toFixed(2) : '' }
+        },
+        {
+            'header': 'r3->re',
+            'f': function(player, event, filters) { return player in playerDataMore && filters.month3 in playerDataMore[player] && filters.event in playerDataMore[player] ? 
+                (playerDataMore[player][filters.event]['Rating2.0'] - playerDataMore[player][filters.month3]['Rating2.0']).toFixed(2) : '' }
         },
         {
             'header': 'r1/$',
-            'f': function(player, event, filter1, filter3) { return player in playerDataMore && filter1 in playerDataMore[player] && filter3 in playerDataMore[player] ? (100000 * playerDataMore[player][filter1]['Rating2.0'] / playerDataMoney[player][event]['cost']).toFixed(4) : '' }
+            'f': function(player, event, filters) { return player in playerDataMoney && event in playerDataMoney[player] && player in playerDataMore && filters.month1 in playerDataMore[player] ? (100000 * playerDataMore[player][filters.month1]['Rating2.0'] / playerDataMoney[player][event]['cost']).toFixed(4) : '' }
         },
         {
             'header': 'r3/$',
-            'f': function(player, event, filter1, filter3) { return player in playerDataMore && filter1 in playerDataMore[player] && filter3 in playerDataMore[player] ? (100000 * playerDataMore[player][filter3]['Rating2.0'] / playerDataMoney[player][event]['cost']).toFixed(4) : '' }
+            'f': function(player, event, filters) { return player in playerDataMoney && event in playerDataMoney[player] && player in playerDataMore && filters.month3 in playerDataMore[player] ? (100000 * playerDataMore[player][filters.month3]['Rating2.0'] / playerDataMoney[player][event]['cost']).toFixed(4) : '' }
+        },
+        {
+            'header': 're/$',
+            'f': function(player, event, filters) { return player in playerDataMoney && event in playerDataMoney[player] && player in playerDataMore && filters.event in playerDataMore[player] ? (100000 * playerDataMore[player][filters.event]['Rating2.0'] / playerDataMoney[player][event]['cost']).toFixed(4) : '' }
         },
     ]
 }
@@ -204,7 +225,7 @@ function setStatus(status) {
     document.querySelector('#statsStatus').innerHTML = status;
 }
 
-function getPlayerStats(periodMonths) {
+function getPlayerStatsPeriod(periodMonths) {
     if (!statsPopup) {
         setStatus('missing popup, try Pop! button');
         return;
@@ -219,6 +240,27 @@ function getPlayerStats(periodMonths) {
         'filter': {
             'startDate': timeFilterFormat(from),
             'endDate': timeFilterFormat(until),
+            'minMapCount': 0,
+        }
+    }, '*');
+}
+
+function getPlayerStatsEvent() {
+    if (!statsPopup) {
+        setStatus('missing popup, try Pop! button');
+        return;
+    }
+    let evenStatsId = document.querySelector('#eventStatsId').value;
+    if (!evenStatsId) {
+        setStatus('need manual statspage id');
+        return;
+    }
+    setStatus('requested some stats!');
+    cmdStatus['getPlayerStats'] = 'requested';
+    statsPopup.postMessage({
+        'cmd': 'getPlayerStats',
+        'filter': {
+            'event': evenStatsId,
             'minMapCount': 0,
         }
     }, '*');
@@ -434,24 +476,47 @@ function addKeyFigures(row, player) {
     // TODO less hardcoding
     let event = JSON.stringify(fantasyInfo);
     let until = new Date();
-    let from1 = new Date();
-    from1.setMonth(from1.getMonth() - 1);
-    let from3 = new Date();
-    from3.setMonth(from3.getMonth() - 3);
-    let filter1 = JSON.stringify({
-        'startDate': timeFilterFormat(from1),
-        'endDate': timeFilterFormat(until),
-        'minMapCount': 0,
-    });
-    let filter3 = JSON.stringify({
-        'startDate': timeFilterFormat(from3),
-        'endDate': timeFilterFormat(until),
-        'minMapCount': 0,
-    });
+    // let from1 = new Date();
+    // from1.setMonth(from1.getMonth() - 1);
+    // let from3 = new Date();
+    // from3.setMonth(from3.getMonth() - 3);
+    // let filter1 = JSON.stringify({
+    //     'startDate': timeFilterFormat(from1),
+    //     'endDate': timeFilterFormat(until),
+    //     'minMapCount': 0,
+    // });
+    // let filter3 = JSON.stringify({
+    //     'startDate': timeFilterFormat(from3),
+    //     'endDate': timeFilterFormat(until),
+    //     'minMapCount': 0,
+    // });
 
+    let evenStatsId = document.querySelector('#eventStatsId').value;
+    if (!evenStatsId) {
+        setStatus('need manual statspage id');
+        return;
+    }
+
+    let filters = {
+        'month1': JSON.stringify({
+            'startDate': timeFilterFormat(new Date(new Date().setMonth(until.getMonth() - 1))),
+            'endDate': timeFilterFormat(until),
+            'minMapCount': 0,
+        }),
+        'month3': JSON.stringify({
+            'startDate': timeFilterFormat(new Date(new Date().setMonth(until.getMonth() - 3))),
+            'endDate': timeFilterFormat(until),
+            'minMapCount': 0,
+        }),
+        'event': JSON.stringify({
+            'event': evenStatsId,
+            'minMapCount': 0,
+        }),
+    }
+    console.log(filters);
     forEach(headers['keyFigures'], function(header) {
         let cell = document.createElement("td");
-        cell.innerText = header.f(player, event, filter1, filter3);
+        cell.innerText = header.f(player, event, filters);
         cell.setAttribute('data-source', 'keyFigures');
         cell.setAttribute('data-key', null);
         row.appendChild(cell);
@@ -507,25 +572,36 @@ function buildPlayerTable() {
             console.warn(`no more data for ${player}`);
         } else {
             let until = new Date();
-            forEach([1,3], function(periodMonths) {
-                let from = new Date();
-                from.setMonth(from.getMonth() - periodMonths);
-                let filter = {
-                    'startDate': timeFilterFormat(from),
+            let evenStatsId = document.querySelector('#eventStatsId').value;
+            if (!evenStatsId) {
+                setStatus('need manual statspage id');
+                return;
+            }
+            let filters = [
+                {
+                    'startDate': timeFilterFormat(new Date(new Date().setMonth(until.getMonth() - 1))),
                     'endDate': timeFilterFormat(until),
                     'minMapCount': 0,
-                }
-                
-                // if (!(JSON.stringify(filter) in headers)) {
-                //     headers[JSON.stringify(filter)] = Object.keys(playerDataMore[Object.keys(playerDataMore)[0]][Object.keys(playerDataMore[Object.keys(playerDataMore)[0]])[0]]);
-                // }
+                },
+                {
+                    'startDate': timeFilterFormat(new Date(new Date().setMonth(until.getMonth() - 3))),
+                    'endDate': timeFilterFormat(until),
+                    'minMapCount': 0,
+                },
+                {
+                    'event': evenStatsId,
+                    'minMapCount': 0,
+                },
+            ]
 
+            forEach(filters, function(filter) {
                 if (!(JSON.stringify(filter) in playerDataMore[player])) {
+                    forEach(headers['moreData'], (_) => row.appendChild(document.createElement("td")));
                     console.warn(`no more data for ${player} with filter ${JSON.stringify(filter)}`);
                 } else {
                     addMoreData(row, playerDataMore[player], JSON.stringify(filter), headers['moreData']);
                 }
-            })
+            });
         }
         
         row.children[0].onclick = addPlayerToTeamClick;
@@ -555,6 +631,7 @@ function buildPlayerTable() {
         'fantasyStats': headers['moneyData'],
         '1 month': headers['moreData'],
         '3 month': headers['moreData'],
+        'event': headers['moreData'],
     }, function(headers2, header1) {
         console.log(JSON.stringify(headers));
         let colspan = headers2.length;

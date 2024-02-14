@@ -26,6 +26,8 @@ function statsRequestHandler(event) {
 
     if (cmd.cmd == 'getPlayerStats') {
       if (!checkHoldoff()) { return }
+      let url = `${HLTV_STATS_BASE}/players?${new URLSearchParams(cmd.filter).toString()}`;
+      console.log(`fetching ${url}`);
       fetch(`${HLTV_STATS_BASE}/players?${new URLSearchParams(cmd.filter).toString()}`)
       .then((resp) => resp.text())
       .then((html) => postToOpener({

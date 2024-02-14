@@ -7,10 +7,13 @@ import time
 import os
 
 HLTV_FANTASY_OVERVIEW = 'https://www.hltv.org/fantasy/json'
+HLTV_FANTASY_EVENT_OVERVIEW = 'https://www.hltv.org/fantasy/{}/overview'
 HLTV_FANTASY_SINGLE_TEAM = 'https://www.hltv.org/fantasy/{}/league/{}/overview/{}/json'
 HLTV_FANTASY_SINGLE_TEAM_RE = r'https://www.hltv.org/fantasy/(\d+)/league/(\d+)/team/(\d+)/*'
 HLTV_FANTASY_LEAGUE_STATS = 'https://www.hltv.org/fantasy/{}/leagues/{}/join/json'
 HLTV_FANTASY_USER_SEASON_STATS = 'https://www.hltv.org/fantasy/user/{}/overview/json'
+
+STATS_ID_RE = r'<a href=\"/events/(\d+)/([a-zA-Z0-9-]*)\".*?</a>'
 
 DB = './data/points.sqlite'
 DB_TEMPLATE = './flaskr/templates/points.sqlite'
@@ -30,7 +33,13 @@ HEADER = {
         'Sec-Fetch-Site': 'same-origin',
     }
 
+def random_sleep():
+    x = random.randint(1,3000)/1000
+    print(f'[DEBUG] Random sleep {x}s')
+    time.sleep(x)
+
 def get_teams_current_season(user_id):
+    random_sleep()
     resp = requests.get(HLTV_FANTASY_USER_SEASON_STATS.format(user_id), headers=HEADER)
     if resp.status_code == 200:
         return json.loads(resp.text)
@@ -39,6 +48,7 @@ def get_teams_current_season(user_id):
 
 def get_league_stats(event_id, league_id):
     print(f'[DEBUG] {HLTV_FANTASY_LEAGUE_STATS.format(event_id, league_id)=}')
+    random_sleep()
     resp = requests.get(HLTV_FANTASY_LEAGUE_STATS.format(event_id, league_id), headers=HEADER)
     # TODO log it to .jsoncache with a timestamp
     if resp.status_code == 200:
@@ -50,6 +60,7 @@ def get_league_stats(event_id, league_id):
 
 
 def get_current_fantasy_overview():
+    random_sleep()
     ret = requests.get(HLTV_FANTASY_OVERVIEW, headers=HEADER)
     assert ret.status_code == 200, f'ERROR fetching fantasy overview, {ret.status_code=}'
     # TODO log it to .jsoncache with a timestamp
@@ -58,6 +69,7 @@ def get_current_fantasy_overview():
 
 def get_single_team(event_id, league_id, team_id):
     url = HLTV_FANTASY_SINGLE_TEAM.format(event_id, league_id, team_id)
+    random_sleep()
     ret = requests.get(url, headers=HEADER)
     assert ret.status_code == 200, f'ERROR fetching team'
     # TODO log it somewhere?
@@ -181,8 +193,16 @@ def add_team(player, link):
     team_data = json.loads(data.text)
     team_to_db(team_data, event_id, player)
 
+# def get_stats_event_id(event_id):
+#     random_sleep()
+#     print(HLTV_FANTASY_EVENT_OVERVIEW.format(event_id))
+#     ret = requests.get(HLTV_FANTASY_EVENT_OVERVIEW.format(event_id), headers=HEADER)
+#     print(ret)
+#     return ret
+
 def refresh_overview():
     overview = json.loads(get_current_fantasy_overview().text)
+    # stats_id = get_stats_ids(overview)
     overview_to_db(overview)
 
 def refresh_live_events():
@@ -196,9 +216,7 @@ def refresh_live_events():
         data = get_single_team(team[0], team[1], team[2])
         team_data = json.loads(data.text)
         team_to_db(team_data, team[0], team[3])
-        x = random.randint(1,3000)/1000
-        print(f'[DEBUG] Random sleep {x}s')
-        time.sleep(x)
+
 
 # def collect_numbers_from_draft_events():
 #     with sqlite3.connect(DB) as con:
