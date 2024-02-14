@@ -159,12 +159,14 @@ function timeFilterFormat(date) {
 
 function statsPop() {
     statsPopup = window.open('', 'statsPopup');
-    if (!!statsPopup) {
-        console.log('found previous statsPopup');
+    try {
+        if (statsPopup.location.href == 'about:blank') {
+            statsPopup = window.open(`https://www.hltv.org/`, 'statsPopup');
+            setStatus('pop up opened, waiting for ping!');
+        }
+    } catch (DOMException) {
+        console.log('found previous statsPopup, cannot check origin assuming its hltv.org');
         setStatus('previous pop up opened!')
-    } else {
-        statsPopup = window.open(`https://www.hltv.org/`, 'statsPopup');
-        setStatus('pop up opened, waiting for ping!')
     }
 }
 
@@ -203,6 +205,10 @@ function setStatus(status) {
 }
 
 function getPlayerStats(periodMonths) {
+    if (!statsPopup) {
+        setStatus('missing popup, try Pop! button');
+        return;
+    }
     let until = new Date();
     let from = new Date();
     setStatus('requested some stats!');
@@ -219,6 +225,10 @@ function getPlayerStats(periodMonths) {
 }
 
 function getMoneyStats(eventId, leagueId) {
+    if (!statsPopup) {
+        setStatus('missing popup, try Pop! button');
+        return;
+    }
     setStatus('requested some stats!');
     cmdStatus['getMoneyStats'] = 'requested';
     statsPopup.postMessage({
