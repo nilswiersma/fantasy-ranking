@@ -1,0 +1,16 @@
+{
+  "manifest_version": 2,
+  "name": "hltv-postmessage",
+  "version": "1.0",
+
+  "description": "Plugin to request HLTV stats via `window.postmessage`. The handler is only inserted if the window is opened with an opener (e.g. via `window.open()`).",
+
+  "icons": { },
+
+  "content_scripts": [
+    {
+      "matches": ["*://*.hltv.org/*"],
+      "js": ["stats.js"]
+    }
+  ]
+}

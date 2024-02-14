@@ -641,7 +641,7 @@ function buildPlayerTable() {
         row1.appendChild(cell);
         forEach(headers2, function(header2) {
             let cell = document.createElement("th");
-            cell.innerText = header2;
+            cell.innerText = `${header2} - ${header1}`;
             row2.appendChild(cell);
         });
     });
@@ -738,6 +738,7 @@ function setupDropdown(dropdown, initialValue) {
 
 <script id="onLoad">
 
+window.addEventListener("load", (event) => {
 // look for previously opened windows
 // statsPopup = window.open(`https://www.hltv.org/fantasy/{{event}}/overview`, 'statsPopup');
 // if (!!statsPopup) {
@@ -764,6 +765,9 @@ setupDropdown(document.querySelector('#XColSelect'), 'cost');
 setupDropdown(document.querySelector('#CColSelect'), 'teamName');
 setupDropdown(document.querySelector('#TColSelect'), 'name');
 updatePlot();
+
+});
+
 </script>
 
 
