@@ -8,16 +8,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <ul>
     <!-- <li>Click to <button onclick="copyCode()">Copy!</button> some code</li> -->
-    <li>Copy the code behind <b><u><a href="{{ url_for('static', filename='more-stats3.js') }}">this link</a></u></b></li>
-    <li>Paste code into console of this <button onclick="statsPop()">Pop!</button> window</li>
+    
+    <li>Install this <button onclick="window.open('https://addons.mozilla.org/en-US/firefox/addon/hltv-postmessage/');">Plugin!</button>, open this <button onclick="statsPop()">Pop!</button> window</li>
     <li>Push buttons below to retreive some stats</li>
     <li>
         <button onclick="clearCache()">clear cache</button>
         <button onclick="getMoneyStats({{event}}, {{league}})">money stats</button>
-        <button onclick="getPlayerStatsPeriod(1)">last month</button>
-        <button onclick="getPlayerStatsPeriod(3)">last 3 months</button>
-        <input id="eventStatsId" type="text" placeholder="event's statspage id"></input>
-        <button onclick="getPlayerStatsEvent()">event</button>
+        <button onclick="getPlayerStatsPeriod(1)">last month stats</button>
+        <button onclick="getPlayerStatsPeriod(3)">last 3 months stats</button>
+    </li>
+    <li>
+        <button onclick="findStatsUrls()">searchEventStatsId</button>
+        <select id="eventStatsSelect"></select>
+        <button onclick="getPlayerStatsSelectedEvent()">selected event stats</button>
         <!-- <button onclick="buildTables()">update tables</button> -->
     </li>
     <li>
@@ -28,7 +31,14 @@
     <li>Budget remaining: <span id="selectedTeamBudgetInfo"></span></li>
 </ul>
 
-<div id="statsStatus"></div>
+<ul>
+    <li>Cmd status:</li>
+        <ul id="cmdStatus"></ul>
+    <li>Status: <span id="statsStatus"></span></li>
+</ul>
+
+<div id="searchResult"></div>
+
 
 <table id="selectedTeamTable" class="statsTable">
     <!-- <tfoot id="selectedTeamTableFoot"><tr>
@@ -46,17 +56,13 @@
 </table>
 
 <br/>
-X: <select id="XColSelect">
-</select>
+X: <select id="XColSelect"></select>
 
-Y: <select id="YColSelect">
-</select>
+Y: <select id="YColSelect"></select>
 
-Color: <select id="CColSelect">
-</select>
+Color: <select id="CColSelect"></select>
 
-Text: <select id="TColSelect">
-</select>
+Text: <select id="TColSelect"></select>
 
 <button onclick="updatePlot()">Plot!</button>
 <br/>
@@ -70,6 +76,16 @@ var cmdStatus = {};
 var statsCounter = 0;
 var playerDataMoney = {};
 var playerDataMore = {};
+
+var cmdStatusUpdater = new Proxy(cmdStatus, {
+    set(obj, prop, value) {
+        obj[prop] = `${value} (1)`;
+        document.querySelector('#cmdStatus').innerHTML = Object.keys(cmdStatus)
+        .map((cmd) => `<li>${cmd}: ${cmdStatus[cmd]}</li>`)
+        .join('');
+        return true;
+    }
+})
 
 var selectedTeam = [];
 var unselectableHidden = false;
@@ -169,6 +185,23 @@ function timeFilterFormat(date) {
     return date.toISOString().split('T')[0];
 }
 
+function searchStatsId() {
+    let eventName = 'Europe RMR A - PGL CS2 Major Copenhagen 2024';
+    eventName = eventName.replace('-' , '');
+    statsPopup.postMessage({
+        'cmd': 'getSearch',
+        'query': {
+            'term': eventName,
+        }
+    }, '*');
+}
+
+function findStatsUrls() {
+    statsPopup.postMessage({
+        'cmd': 'findStatsUrls',
+    }, '*');
+}
+
 // function copyCode() {
 //     fetch(`{{ url_for('static', filename='more-stats3.js') }}`)
 //     .then((resp) => resp.text())
@@ -180,15 +213,10 @@ function timeFilterFormat(date) {
 
 function statsPop() {
     statsPopup = window.open('', 'statsPopup');
-    try {
-        if (statsPopup.location.href == 'about:blank') {
-            statsPopup = window.open(`https://www.hltv.org/`, 'statsPopup');
-            setStatus('pop up opened, waiting for ping!');
-        }
-    } catch (DOMException) {
-        console.log('found previous statsPopup, cannot check origin assuming its hltv.org');
-        setStatus('previous pop up opened!')
-    }
+    localStorage.setItem('statsPopup', 'true');
+
+    statsPopup = window.open(`https://www.hltv.org/fantasy/{{event}}/overview`, 'statsPopup');
+    setStatus('pop up opened, waiting for ping!');
 }
 
 function readTeam(fantasyPlayer) {
@@ -234,7 +262,7 @@ function getPlayerStatsPeriod(periodMonths) {
     let from = new Date();
     setStatus('requested some stats!');
     from.setMonth(from.getMonth() - periodMonths);
-    cmdStatus['getPlayerStats'] = 'requested';
+    cmdStatusUpdater['getPlayerStats'] = 'requested';
     statsPopup.postMessage({
         'cmd': 'getPlayerStats',
         'filter': {
@@ -245,18 +273,18 @@ function getPlayerStatsPeriod(periodMonths) {
     }, '*');
 }
 
-function getPlayerStatsEvent() {
+function getPlayerStatsSelectedEvent() {
     if (!statsPopup) {
         setStatus('missing popup, try Pop! button');
         return;
     }
-    let evenStatsId = document.querySelector('#eventStatsId').value;
+    let evenStatsId = document.querySelector('#eventStatsSelect').value;
     if (!evenStatsId) {
         setStatus('need manual statspage id');
         return;
     }
     setStatus('requested some stats!');
-    cmdStatus['getPlayerStats'] = 'requested';
+    cmdStatusUpdater['getPlayerStats'] = 'requested';
     statsPopup.postMessage({
         'cmd': 'getPlayerStats',
         'filter': {
@@ -272,7 +300,7 @@ function getMoneyStats(eventId, leagueId) {
         return;
     }
     setStatus('requested some stats!');
-    cmdStatus['getMoneyStats'] = 'requested';
+    cmdStatusUpdater['getMoneyStats'] = 'requested';
     statsPopup.postMessage({
         'cmd': 'getMoneyStats',
         'fantasyInfo': {
@@ -342,11 +370,12 @@ function statsMessageHandler(event) {
 
     let resp = event.data;
 
+    cmdStatusUpdater[resp.cmd] = resp.status;
+
     if (resp.cmd == 'ping') {
         setStatus('ping received');
         statsPopupPinged = true;
     } else if (resp.cmd == 'getPlayerStats') {
-        cmdStatus['getPlayerStats'] = resp.status;
         if (resp.status == 'holdoff') {
             setStatus('hold off for a bit');
         } else if (resp.status == 'ok') {
@@ -356,7 +385,6 @@ function statsMessageHandler(event) {
             buildTables();
         }
     } else if (resp.cmd == 'getMoneyStats') {
-        cmdStatus['getMoneyStats'] = resp.status;
         if (resp.status == 'holdoff') {
             setStatus('hold off for a bit');
         } else if (resp.status == 'ok') {
@@ -364,6 +392,26 @@ function statsMessageHandler(event) {
             setStatus(`got ${statsCounter} stats reply!`);
             parsePlayerMoneyStats(resp.playerStatsJson, resp.fantasyInfo);
             buildTables();
+        }
+    } else if (resp.cmd == 'findStatsUrls') {
+        if (resp.status == 'holdoff') {
+            setStatus('hold off for a bit');
+        } else if (resp.status == 'ok') {
+            setStatus(`got stats urls results!`);
+            console.log(resp.json);
+            document.querySelector('#eventStatsSelect').innerHTML = resp.json
+            .filter((elem) => elem.eventStatsName != "matches")
+            .filter((elem, idx, self) => self.findIndex((elem2) => elem2.eventStatsName == elem.eventStatsName) == idx)
+            .map((event) => `<option value="${event.eventStatsId}">${event.eventStatsName}</option>`);
+        }
+    } else if (resp.cmd == 'getSearch') {
+        if (resp.status == 'holdoff') {
+            setStatus('hold off for a bit');
+        } else if (resp.status == 'ok') {
+            setStatus(`got search results!`);
+            console.log(resp.json);
+            
+            document.querySelector('#searchResult').innerHTML = JSON.stringify(json);
         }
     }
 }
@@ -476,26 +524,12 @@ function addKeyFigures(row, player) {
     // TODO less hardcoding
     let event = JSON.stringify(fantasyInfo);
     let until = new Date();
-    // let from1 = new Date();
-    // from1.setMonth(from1.getMonth() - 1);
-    // let from3 = new Date();
-    // from3.setMonth(from3.getMonth() - 3);
-    // let filter1 = JSON.stringify({
-    //     'startDate': timeFilterFormat(from1),
-    //     'endDate': timeFilterFormat(until),
-    //     'minMapCount': 0,
-    // });
-    // let filter3 = JSON.stringify({
-    //     'startDate': timeFilterFormat(from3),
-    //     'endDate': timeFilterFormat(until),
-    //     'minMapCount': 0,
-    // });
 
-    let evenStatsId = document.querySelector('#eventStatsId').value;
-    if (!evenStatsId) {
-        setStatus('need manual statspage id');
-        return;
-    }
+    // let evenStatsId = ;
+    // // if (!evenStatsId) {
+    // //     setStatus('need manual statspage id');
+    // //     return;
+    // // }
 
     let filters = {
         'month1': JSON.stringify({
@@ -509,7 +543,7 @@ function addKeyFigures(row, player) {
             'minMapCount': 0,
         }),
         'event': JSON.stringify({
-            'event': evenStatsId,
+            'event': document.querySelector('#eventStatsSelect').value,
             'minMapCount': 0,
         }),
     }
@@ -572,11 +606,7 @@ function buildPlayerTable() {
             console.warn(`no more data for ${player}`);
         } else {
             let until = new Date();
-            let evenStatsId = document.querySelector('#eventStatsId').value;
-            if (!evenStatsId) {
-                setStatus('need manual statspage id');
-                return;
-            }
+
             let filters = [
                 {
                     'startDate': timeFilterFormat(new Date(new Date().setMonth(until.getMonth() - 1))),
@@ -589,10 +619,10 @@ function buildPlayerTable() {
                     'minMapCount': 0,
                 },
                 {
-                    'event': evenStatsId,
+                    'event': document.querySelector('#eventStatsSelect').value,
                     'minMapCount': 0,
                 },
-            ]
+            ];
 
             forEach(filters, function(filter) {
                 if (!(JSON.stringify(filter) in playerDataMore[player])) {
@@ -607,8 +637,6 @@ function buildPlayerTable() {
         row.children[0].onclick = addPlayerToTeamClick;
         document.querySelector('#playerTable tbody').appendChild(row);
     });
-
-    console.log(headers);
 
     let row1 = document.createElement("tr");
     let row2 = document.createElement("tr");
@@ -633,7 +661,6 @@ function buildPlayerTable() {
         '3 month': headers['moreData'],
         'event': headers['moreData'],
     }, function(headers2, header1) {
-        console.log(JSON.stringify(headers));
         let colspan = headers2.length;
         let cell = document.createElement("th");
         cell.setAttribute('colspan', colspan);
@@ -709,6 +736,8 @@ function updatePlot(event) {
             colorbar: {}
         },
     }], {
+        height: 800,
+        width: 800,
         title: `${xLabel} vs. ${yLabel}`,
         xaxis: {
             title: xLabel
@@ -738,7 +767,7 @@ function setupDropdown(dropdown, initialValue) {
 
 <script id="onLoad">
 
-window.addEventListener("load", (event) => {
+window.addEventListener('load', (event) => {
 // look for previously opened windows
 // statsPopup = window.open(`https://www.hltv.org/fantasy/{{event}}/overview`, 'statsPopup');
 // if (!!statsPopup) {
@@ -757,8 +786,30 @@ if (playerDataMoney === null) {
 
 buildTables();
 
+cmdStatusUpdater['ping'] = 'waiting';
 setStatus('waiting for ping!');
 window.addEventListener("message", statsMessageHandler, false);
+
+if (localStorage.getItem('statsPopup') == 'true') {
+    statsPopup = window.open(`https://www.hltv.org/fantasy/{{event}}/overview`, 'statsPopup');
+    setStatus('previous pop up opened!')
+
+    setTimeout(() => {
+    findStatsUrls();
+    setTimeout(() => {
+    getMoneyStats({{event}}, {{league}});
+    setTimeout(() => {
+    getPlayerStatsPeriod(1);
+    setTimeout(() => {
+    getPlayerStatsPeriod(3);
+    setTimeout(() => {
+    getPlayerStatsSelectedEvent();
+    }, 500);
+    }, 500);
+    }, 500);
+    }, 500);
+    }, 3000);
+}
 
 setupDropdown(document.querySelector('#YColSelect'), 'r3');
 setupDropdown(document.querySelector('#XColSelect'), 'cost');
