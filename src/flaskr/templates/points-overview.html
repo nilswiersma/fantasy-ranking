@@ -1,0 +1,75 @@
+<!doctype html>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+
+<table id="scoreBoard">
+    <tr>
+        <th rowspan="2" colspan="2"/>
+        <th>Nils</th>
+        <th>Eric</th>
+    </tr>
+    <tr>
+    </tr>
+    {% for season, season_data in data.events.items() |season_sort |reverse %}
+        <tr>
+            <th>{{ season }}</th>
+            <th align="left">Total</th>
+            <th align="right">{{ data.totals[season][1355207] }}</th>
+            <th align="right">{{ data.totals[season][1223636] }}</th>
+        </tr>
+        {% for event, event_data in season_data.items() |sort |reverse %}
+        <tr>
+            <th rowspan="3">
+                <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/overview">
+                    {{event_data.name}}
+                    <br/>
+                    <a target="_blank" rel="noopener noreferrer" href="{{ url_for('stats') }}?event={{ event }}">📈</a>
+
+                </a> 
+            </th>
+            <th align="left">Points</th>
+            {% if data.points[event] %}
+                {% if data.points[event][1355207] %}
+                <td><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/user/1355207/overview/gameredirect">{{ data.points[event][1355207].teamTeamPoints |int }}</a></td>
+                {% else %}
+                <td rowspan="3"><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/leagues/join">JOIN NOW!</a></td>
+                {% endif %}
+                {% if data.points[event][1223636] %}
+                <td><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/user/1223636/overview/gameredirect">{{ data.points[event][1223636].teamTeamPoints |int }}</a></td>
+                {% else %}
+                <td rowspan="3"><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/leagues/join">JOIN NOW!</a></td>
+                {% endif %}
+            {% else %}
+                <td rowspan="3"><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/leagues/join">JOIN NOW!</a></td>
+                <td rowspan="3"><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/leagues/join">JOIN NOW!</a></td>
+            {% endif %}
+        </tr>
+        <tr>
+            <th align="left">Placement</th>
+            {% if data.points[event] %}
+                {% if data.points[event][1355207] %}
+                <td>{{ data.points[event][1355207].teamPlacementPercent |int }}%</td>
+                {% endif %}
+                {% if data.points[event][1223636] %}
+                <td>{{ data.points[event][1223636].teamPlacementPercent |int }}%</td>
+                {% endif %}
+            {% endif %}
+        </tr>
+        <tr>
+            <th align="left">Season</th>
+            {% if data.points[event] %}
+                {% if data.points[event][1355207] %}
+                <td>{{ data.points[event][1355207].teamSeasonPoints |int }}</td>
+                {% endif %}
+                {% if data.points[event][1223636] %}
+                <td>{{ data.points[event][1223636].teamSeasonPoints |int }}</td>
+                {% endif %}
+            {% endif %}
+        </tr>
+        {% endfor %}
+    {% endfor %}
+</table>
+
+<!-- </div></body> -->

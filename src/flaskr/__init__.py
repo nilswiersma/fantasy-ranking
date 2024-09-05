@@ -4,6 +4,8 @@ from hltv.helpers import *
 
 import os
 
+# https://stackoverflow.com/questions/49380155/is-it-possible-to-sort-a-list-of-objects-in-jinja2-based-on-subattributes
+
 def create_app():
     if not os.path.exists(DB):
         print('[DEBUG] creating db by copying base db')
@@ -17,28 +19,13 @@ def create_app():
     except OSError:
         pass
 
+    @app.template_filter('season_sort')
+    def season_sort(value):
+        sortable = dict([(x[0], '.'.join(x[0].replace('Fall', '2').replace('Spring', '1').split(' season ')[::-1])) for x in value])
+        return sorted(value, key=lambda elem: sortable[elem[0]])
+
     @app.route("/", methods=('GET', 'POST'))
     def hello_world():
-        if request.method == 'POST':
-            app.logger.info(f'{request.form=}')
-            key = next(iter(request.form.keys()))
-
-            if key == 'refresh':
-                # refresh_live_events()
-                # refresh_overview()
-                pass
-            else:
-                if key == 'nils_hltvlink':
-                    player = 'nils'
-                elif key == 'eric_hltvlink':
-                    player = 'eric'
-                else:
-                    raise Exception()
-                
-                value = request.form[key]
-
-                add_team(player, value)
-
         data = get_data()
         app.logger.info(f'{data=}')
         return render_template('points-overview.html', data=data, can_refresh=False)
@@ -51,7 +38,7 @@ def create_app():
             return jsonify(stats)
         else:
             event = request.args.get('event')
-            league = request.args.get('league')
+            league = -1 #request.args.get('league')
             return render_template('stats-overview.html', event=event, league=league)
 
     @app.route("/stats2", methods=('GET', 'POST'))

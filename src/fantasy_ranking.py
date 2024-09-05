@@ -2,6 +2,15 @@ import os
 import hltv.background_update
 from hltv.helpers import DB, DB_TEMPLATE
 
+try:
+    import colorlog as logging
+    logger = logging.getLogger(__name__)
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
+
+logging.basicConfig(level=logging.INFO)
+
 if not os.path.exists(DB):
     print(f'[DEBUG] {os.getcwd()=}')
     print('[DEBUG] creating db by copying base db')
