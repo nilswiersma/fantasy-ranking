@@ -7,6 +7,8 @@ import random
 import time
 import os
 
+from flask import escape
+
 try:
     import colorlog as logging
     logger = logging.getLogger(__name__)
@@ -102,15 +104,17 @@ def get_current_fantasy_overview():
     else:
         raise Exception(f'{resp.status_code=} {resp.text=}')
 
-def get_single_team(event_id, user_id, team_id):
-    raise Exception('TODO')
-    logger.debug(f'{HLTV_FANTASY_SINGLE_TEAM.format(event_id, league_id, team_id)=}')
-    random_sleep()
-    resp = requests.get(HLTV_FANTASY_SINGLE_TEAM.format(event_id, league_id, team_id), headers=HEADER)
-    if resp.status_code == 200:
-        return resp.json()
+def get_single_team(fantasy_id, user_id):
+    resp = safe_get(HLTV_FANTASY_LEAGUE_TEAM_REDIRECT.format(escape(fantasy_id), escape(user_id)))
+    team_url = resp.json()['url']
+    logger.info(f'{team_url=}')
+    logger.info(f'https://www.hltv.org{escape(team_url.replace("team", "overview"))}/json')
+    if team_url == f'/fantasy/{fantasy_id}/overview':
+        # no team listed yet
+        return {}
     else:
-        raise Exception(f'{resp.status_code=} {resp.text=}')
+        resp = safe_get(f'https://www.hltv.org{escape(team_url.replace("team", "overview"))}/json')
+        return resp.json()
 
 def get_role_booster_stats(event_id, league_id, team_id):
     logger.debug(f'{HLTV_FANTASY_ROLE_BOOSTER_STATS.format(event_id, league_id, team_id, event_id)=}')
@@ -347,7 +351,7 @@ def get_draft_events(db_name):
         fantasyIds = cur.execute(query).fetchall()
         return fantasyIds
 
-def get_draft_event_team_id(fantasy_id, user_id):
+def get_event_team_id(fantasy_id, user_id):
     logger.info(f'{HLTV_FANTASY_LEAGUE_TEAM_REDIRECT.format(fantasy_id, user_id)=}')
     random_sleep()
     resp = requests.get(HLTV_FANTASY_LEAGUE_TEAM_REDIRECT.format(fantasy_id, user_id), headers=HEADER)
@@ -372,7 +376,7 @@ def update_user_teams_current_season(db_name, user_id):
     
     for fantasy_id in fantasy_ids:
         fantasy_id = fantasy_id[0]
-        team_id = get_draft_event_team_id(fantasy_id, user_id)
+        team_id = get_event_team_id(fantasy_id, user_id)
 
         if team_id != None:
             df.loc[(fantasy_id, user_id), :] = [team_id] + [None] * (df.iloc[0].shape[0]-1)

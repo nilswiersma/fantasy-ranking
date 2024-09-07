@@ -55,10 +55,7 @@ def create_app():
         if request.method == 'POST':
             args = json.loads(request.get_data().decode())
             app.logger.debug(args)
-            params = get_team_params(args['event'], args['fantasyPlayer'])
-            app.logger.debug(params)
-            data = get_single_team(*params)
-            team_data = json.loads(data.text)
+            team_data = get_single_team(args['event'], args['fantasyPlayer'])
             return jsonify(team_data)
     
     @app.route('/json_test')
