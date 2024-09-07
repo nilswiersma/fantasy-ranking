@@ -1,4 +1,4 @@
-FROM python:3.8-alpine
+FROM python:3-alpine
 
 # build tools
 RUN apk update && apk add python3-dev gcc libc-dev git tree
@@ -13,4 +13,4 @@ RUN pip install -e .
 EXPOSE 8080
 
 # ENTRYPOINT [ "waitress-serve", "--call", "flaskr:create_app" ]
-ENTRYPOINT [ "python", "main.py" ]
+ENTRYPOINT [ "python", "-m", "fantasy_ranking" ]
