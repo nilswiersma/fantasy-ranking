@@ -1,19 +1,26 @@
 # docker
 
 clear all containers:
+```
 docker rm -vf $(docker ps -a -q)
+```
 
 clear all images:
+```
 docker rmi -f $(docker images -a -q)
+```
 
-docker build -t flaskr .
+```
+docker build -t fantasy-ranking .
+```
 
+```
 docker run \
     --rm \
     -p 8081:8080 \
     --mount type=bind,source="$(pwd)"/data,target=/fantasy-ranking/data \
-    --name fantasy-ranking \
-    flaskr
+    fantasy-ranking
+```
 
 # local test
 
