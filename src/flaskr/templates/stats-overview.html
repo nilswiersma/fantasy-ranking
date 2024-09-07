@@ -7,8 +7,6 @@
 
 <button onclick="readTeam('nils')">Read team Nils</button>
 <button onclick="readTeam('eric')">Read team Eric</button>
-<button onclick="collectMoreStats()">More stats!</button>
-<button onclick="clearCache()">Clear cache</button>
 <button onclick="toggleHideUnselectable()">Toggle unselectable</button>
 
 <div id="moreStatsInstructions"></div>
@@ -224,7 +222,6 @@ function readTeam(fantasyPlayer) {
         referrerPolicy: "no-referrer",
         body: JSON.stringify({
             "event": "{{ event }}",
-            "league": "{{ league }}",
             "fantasyPlayer": fantasyPlayer,
         })
     }).then(function(resp) {

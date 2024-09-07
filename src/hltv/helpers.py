@@ -102,7 +102,8 @@ def get_current_fantasy_overview():
     else:
         raise Exception(f'{resp.status_code=} {resp.text=}')
 
-def get_single_team(event_id, league_id, team_id):
+def get_single_team(event_id, user_id, team_id):
+    raise Exception('TODO')
     logger.debug(f'{HLTV_FANTASY_SINGLE_TEAM.format(event_id, league_id, team_id)=}')
     random_sleep()
     resp = requests.get(HLTV_FANTASY_SINGLE_TEAM.format(event_id, league_id, team_id), headers=HEADER)
@@ -195,9 +196,8 @@ def get_data():
 
 def get_team_params(event_id, player):
     with sqlite3.connect(DB) as con:
-        ret = {}
         cur = con.cursor()
-        data = cur.execute('''select event_id, league_id, team_id from points where event_id=? and player=?''', (event_id, player)).fetchone()
+        data = cur.execute('''select fantasyId, userId, teamId from fantasy_teams where fantasyId=? and userId=?''', (event_id, player)).fetchone()
         return data
 
 def add_team(player, link):
