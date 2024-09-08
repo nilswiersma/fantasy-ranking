@@ -14,13 +14,12 @@
     </tr>
     {% for season, season_data in data.events.items() |season_sort |reverse %}
         <tr>
-            <th>{{ season }}</th>
-            <th align="left">Total</th>
-            <th align="right">{{ data.totals[season][1355207] }}</th>
-            <th align="right">{{ data.totals[season][1223636] }}</th>
+            <th class="seasonHeader" season="{{ season }}" colspan="2" align="center">{{ season }}</th>
+            <th class="seasonHeader" season="{{ season }}" align="center">{{ data.totals[season][1355207] }}</th>
+            <th class="seasonHeader" season="{{ season }}" align="center">{{ data.totals[season][1223636] }}</th>
         </tr>
         {% for event, event_data in season_data.items() |sort |reverse %}
-        <tr>
+        <tr class="seasonRow" season="{{ season }}">
             <th rowspan="3">
                 <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/overview">
                     {{event_data.name}}
@@ -54,7 +53,7 @@
                 <td rowspan="3"><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/leagues/join">JOIN NOW!</a></td>
             {% endif %}
         </tr>
-        <tr>
+        <tr class="seasonRow" season="{{ season }}">
             <th align="left">Placement</th>
             {% if data.points[event] %}
                 {% if data.points[event][1355207] %}
@@ -65,7 +64,7 @@
                 {% endif %}
             {% endif %}
         </tr>
-        <tr>
+        <tr class="seasonRow" season="{{ season }}">
             <th align="left">Season</th>
             {% if data.points[event] %}
                 {% if data.points[event][1355207] %}
@@ -80,4 +79,24 @@
     {% endfor %}
 </table>
 
-<!-- </div></body> -->
+<script>
+
+function hideSeasonDetails(args) {
+    let season = args.target.getAttribute('season');
+    document.querySelectorAll('.seasonRow').forEach(function(seasonRow, idx) {
+        if (seasonRow.getAttribute('season') == season) {
+            seasonRow.hidden = !seasonRow.hidden;
+        }
+    });
+}
+
+window.addEventListener('load', async () => {
+    document.querySelectorAll('.seasonHeader').forEach(function(seasonRow, idx) {
+        seasonRow.onclick = hideSeasonDetails;
+        if (idx != 0) {
+            console.log(seasonRow);
+            seasonRow.click();
+        }
+    });
+}, false);
+</script>

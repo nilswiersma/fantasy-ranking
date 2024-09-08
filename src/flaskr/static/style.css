@@ -24,8 +24,8 @@ th {
 
 td,
 th {
-    max-width: 40px;
-    white-space: wrap;
+    /* max-width: 40px; */
+    white-space: nowrap;
     overflow: hidden;
     /* text-overflow: ".."; */
     border-left: 1px solid #495867;
@@ -41,8 +41,9 @@ a {
 }
 
 #scoreBoard {
-    width: 100%;
-    max-width: 975px;
+    /* width: 100%; */
+    /* max-width: 975px; */
+    white-space: wrap;
 }
 
 .statsTable {

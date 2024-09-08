@@ -72,7 +72,7 @@ def get_fantasy_teams_current_season(user_id):
     else:
         raise Exception(f'{resp.status_code=} {resp.text=}')
 
-def get_league_stats(event_id, league_id):
+def get_league_stats(event_id):
     # https://www.hltv.org/fantasy/475/user/1223636/overview/redirect/json
     resp = safe_get(HLTV_FANTASY_EVENT_OVERVIEW.format(event_id))
     league_id = resp.json()['hltvLeagueId']['id']

@@ -27,14 +27,14 @@ def create_app():
     @app.route("/", methods=('GET', 'POST'))
     def hello_world():
         data = get_data()
-        app.logger.info(f'{data=}')
+        app.logger.info(f'data={str(data)[:100]}...')
         return render_template('points-overview.html', data=data, can_refresh=False)
     
     @app.route("/stats", methods=('GET', 'POST'))
     def stats():
         if request.method == 'POST':
             args = json.loads(request.get_data().decode())
-            stats = get_league_stats(args['event'], args['league'])
+            stats = get_league_stats(args['event'])
             return jsonify(stats)
         else:
             event = request.args.get('event')

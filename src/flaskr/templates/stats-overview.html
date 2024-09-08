@@ -22,22 +22,14 @@
     </tr></tfoot>
 </table>
 <br/>
+
 <table id="playerTable" class="statsTable">
-    <!-- <thead id="selectedTeamTableHead2"></thead> -->
     <thead id="playerTableHead">
-        <!-- <tr>
-            <th colspan="7"></th>
-            <th colspan="10">period1</th>
-            <th colspan="5">period2</th>
-            <th colspan="5">period3</th>
-        </tr> -->
     </thead>
     <tbody id="playerTableBody"></tbody>
 </table>
 
 <div id="resp"></div>
-
-<!-- <iframe id="hltvFrame" src="https://www.hltv.org/fantasy/{{event}}/overview"></iframe>  -->
 
 <script>
 
@@ -51,7 +43,6 @@ tableHeaders.push('cost');
 tableHeaders.push('playerLevel');
 tableHeaders.push('teamName');
 tableHeaders.push('teamRank');
-// tableHeaders.push('1-3-rDiff');
 tableHeaders.push('r/$');
 tableHeaders.push('rating');
 tableHeaders.push('awpKillsPerRound');
@@ -63,16 +54,6 @@ tableHeaders.push('multiKillRounds');
 tableHeaders.push('supportRounds');
 tableHeaders.push('ctRating');
 tableHeaders.push('tRating');
-// tableHeaders.push('1-rating');
-// tableHeaders.push('1-maps');
-// tableHeaders.push('1-rounds');
-// tableHeaders.push('1-kd_diff');
-// tableHeaders.push('1-kd_ratio');
-// tableHeaders.push('3-rating');
-// tableHeaders.push('3-maps');
-// tableHeaders.push('3-rounds');
-// tableHeaders.push('3-kd_diff');
-// tableHeaders.push('3-kd_ratio');
 
 function toggleHideUnselectable() {
     unselectableHidden = !unselectableHidden;
@@ -82,16 +63,13 @@ function toggleHideUnselectable() {
     }); 
 }
 
-function clearCache() {
-    localStorage.removeItem(`https://www.hltv.org/fantasy/{{event}}/overview`);
-}
-
 function buildPlayerRow(name) {
-    var cell;
-    var row = document.createElement("tr");
+    let row = document.createElement("tr");
     row.id = `_${name}`;
     forEach(tableHeaders, function(header) {
-        cell = document.createElement("td"); cell.innerHTML = playerData[name][header]; row.appendChild(cell);
+        let cell = document.createElement("td");
+        cell.innerHTML = playerData[name][header]; 
+        row.appendChild(cell);
     });
     return row;
 }
@@ -240,99 +218,71 @@ function readTeam(fantasyPlayer) {
     });
 }
 
-function collectMoreStats() {
-    document.querySelector('#moreStatsInstructions').innerHTML = 'Copy <a href="{{ url_for('static', filename='more-stats.js') }}">this code</a>, paste it in the window that <button onclick="window.open(`https://www.hltv.org/fantasy/{{event}}/overview`);">this button opens</button>, and then come back here and wait a minute or two.';
-    document.querySelector('#moreStatsStatus').innerHTML = 'Waiting for more stats to come in..';
-}
-
-function moreStatsHandler(event) {
-    // console.log(event);
-    // window.removeEventListener("message", moreStatsHandler);
-    document.querySelector('#moreStatsInstructions').innerHTML = '';
-    forEach(event.data, function(stats, playerName) {
-        if (!(playerName in playerData)) {
-            console.debug(`${playerName} not in playerData`);
-        } else {
-            playerData[playerName] = {...playerData[playerName], ...stats};
-            playerData[playerName]['1-3-rDiff'] = (playerData[playerName]['1-rating'] - playerData[playerName]['3-rating']).toFixed(2);
-        }
-    });
-    localStorage.setItem('https://www.hltv.org/fantasy/{{event}}/overview', JSON.stringify(playerData));
-    buildPlayerTable();
-    document.querySelector('#moreStatsStatus').innerHTML = 'Additional stats coming in!';
-}
-
 function buildPlayerTable() {
     document.querySelector('#playerTableBody').innerHTML = ''; 
     forEach(playerData, function(_, player) {
-        row = buildPlayerRow(player);
+        let row = buildPlayerRow(player);
         row.children[0].onclick = addPlayerToTeamClick;
         document.querySelector('#playerTableBody').appendChild(row);
     });
 }
 
 window.addEventListener('load', async () => {
-    var cachedPlayerData = localStorage.getItem('https://www.hltv.org/fantasy/{{event}}/overview');
-    if (!!cachedPlayerData) {
-        console.log('using cached playerData');
-        playerData = JSON.parse(cachedPlayerData);
-    } else {
-        await fetch('{{ url_for("stats") }}', {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            mode: "no-cors",
-            origin: null,
-            referrerPolicy: "no-referrer",
-            body: JSON.stringify({
-                "event": "{{ event }}",
-                "league": "{{ league }}",
-            })
-        }).then(function(resp) {
-            var ret = resp.json();
-            return ret;
-        }).then(function(data) {
-            // document.querySelector('#resp').textContent = JSON.stringify(data);
-            console.log(data);
-            
-
-            forEach(data['moneyDraftData']['teams'][0]['players'][0]['playerData']['stats'], function(stat, statName) {
-                if (tableHeaders.indexOf(statName) == -1) {
-                    console.log(`${statName} not in tableHeaders`)
-                }
-            });
-
-            forEach(data['moneyDraftData']['teams'], function(team) {
-                forEach(team['players'], function(player) {
-                    // waiting for the day there are two players with exact same name
-                    playerData[player['playerData']['name']] = {}
-                    forEach(tableHeaders, function(header) {
-                        playerData[player['playerData']['name']][header] = player['playerData']['stats'][header];
-                    });
-                    playerData[player['playerData']['name']]['name'] = player['playerData']['name'];
-                    playerData[player['playerData']['name']]['cost'] = player['cost'];
-                    playerData[player['playerData']['name']]['playerLevel'] = player['playerData']['playerLevel'];
-                    playerData[player['playerData']['name']]['teamRank'] = team['rank'];
-                    playerData[player['playerData']['name']]['teamName'] = team['teamData']['name'];
-                    playerData[player['playerData']['name']]['r/$'] = (100000 * player['playerData']['stats']['rating'] / player['cost']).toFixed(4);
-                });
-            });
-            
-        });
-    }
-
-    var cell;
-    var row = document.createElement("tr");
+    let row = document.createElement("tr");
     forEach(tableHeaders, function(header) {
-        cell = document.createElement("th"); cell.innerHTML = header; cell.classList.add('sorttable_numeric'); row.appendChild(cell);        
+        let cell = document.createElement("th"); 
+        cell.innerHTML = header; 
+        cell.classList.add('sorttable_numeric'); 
+        row.appendChild(cell);        
     });
     document.querySelector('#playerTableHead').appendChild(row);
     document.querySelector('#selectedTeamTableHead').appendChild(row.cloneNode(true));
     sorttable.makeSortable(document.querySelector('#playerTable'));
-    sorttable.makeSortable(document.querySelector('#selectedTeamTable'));    
+    sorttable.makeSortable(document.querySelector('#selectedTeamTable'));  
+
+    await fetch('{{ url_for("stats") }}', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        mode: "no-cors",
+        origin: null,
+        referrerPolicy: "no-referrer",
+        body: JSON.stringify({
+            "event": "{{ event }}",
+        })
+    }).then(function(resp) {
+        let ret = resp.json();
+        return ret;
+    }).then(function(data) {
+        // document.querySelector('#resp').textContent = JSON.stringify(data);
+        console.log(data);
+        
+        forEach(data['moneyDraftData']['teams'][0]['players'][0]['playerData']['stats'], function(stat, statName) {
+            if (tableHeaders.indexOf(statName) == -1) {
+                console.log(`${statName} not in tableHeaders`)
+            }
+        });
+
+        forEach(data['moneyDraftData']['teams'], function(team) {
+            forEach(team['players'], function(player) {
+                // waiting for the day there are two players with exact same name
+                playerData[player['playerData']['name']] = {}
+                forEach(tableHeaders, function(header) {
+                    playerData[player['playerData']['name']][header] = player['playerData']['stats'][header];
+                });
+                playerData[player['playerData']['name']]['name'] = player['playerData']['name'];
+                playerData[player['playerData']['name']]['cost'] = player['cost'];
+                playerData[player['playerData']['name']]['playerLevel'] = player['playerData']['playerLevel'];
+                playerData[player['playerData']['name']]['teamRank'] = team['rank'];
+                playerData[player['playerData']['name']]['teamName'] = team['teamData']['name'];
+                playerData[player['playerData']['name']]['r/$'] = (100000 * player['playerData']['stats']['rating'] / player['cost']).toFixed(4);
+            });
+        });
+        
+    });
+  
     buildPlayerTable();
-    window.addEventListener("message", moreStatsHandler, false);
 }, false);
 
 
