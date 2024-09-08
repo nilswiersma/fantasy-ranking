@@ -192,7 +192,7 @@ def get_data():
 
     df = df_season_events.set_index(['seasonName', 'fantasyId'])
     ret['events'] = {level: df.xs(level).to_dict('index') for level in df.index.levels[0]}
-    df = df_fantasy_teams.set_index(['fantasyId', 'userId'])
+    df = df_fantasy_teams.set_index(['fantasyId', 'userId']).fillna(0)
     ret['points'] = {level: df.xs(level).to_dict('index') for level in df.index.levels[0]}
     df = df_totals.set_index(['seasonName', 'userId']).squeeze()
     ret['totals'] = {level: df.xs(level).to_dict() for level in df.index.levels[0]}

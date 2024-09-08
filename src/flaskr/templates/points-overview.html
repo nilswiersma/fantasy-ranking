@@ -32,12 +32,20 @@
             <th align="left">Points</th>
             {% if data.points[event] %}
                 {% if data.points[event][1355207] %}
-                <td><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/user/1355207/overview/gameredirect">{{ data.points[event][1355207].teamTeamPoints |int }}</a></td>
+                {% set team = data.points[event][1355207] %}
+                <td><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/user/1355207/overview/gameredirect">
+                    {% set teamSum = team['teamTeamPoints'] + team['teamBoostPoints'] + team['teamPlayerPoints'] + team['teamRolePoints'] %}
+                    {{ teamSum |int }}
+                </a></td>
                 {% else %}
                 <td rowspan="3"><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/leagues/join">JOIN NOW!</a></td>
                 {% endif %}
                 {% if data.points[event][1223636] %}
-                <td><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/user/1223636/overview/gameredirect">{{ data.points[event][1223636].teamTeamPoints |int }}</a></td>
+                {% set team = data.points[event][1223636] %}
+                <td><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/user/1223636/overview/gameredirect">
+                    {% set teamSum = team['teamTeamPoints'] + team['teamBoostPoints'] + team['teamPlayerPoints'] + team['teamRolePoints'] %}
+                    {{ teamSum |int }}
+                </a></td>
                 {% else %}
                 <td rowspan="3"><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/leagues/join">JOIN NOW!</a></td>
                 {% endif %}
