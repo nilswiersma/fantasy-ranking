@@ -24,7 +24,6 @@ th {
 
 td,
 th {
-    /* max-width: 40px; */
     white-space: nowrap;
     overflow: hidden;
     /* text-overflow: ".."; */
@@ -46,9 +45,8 @@ a {
     white-space: wrap;
 }
 
-.statsTable {
-    /* width: 980px; */
-    white-space: nowrap;
+.statsTable, th, td {
+    max-width: 40px;
 }
 
 .playerSelectable {

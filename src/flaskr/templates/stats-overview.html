@@ -45,6 +45,8 @@ tableHeaders.push('teamName');
 tableHeaders.push('teamRank');
 tableHeaders.push('r/$');
 tableHeaders.push('rating');
+tableHeaders.push('tRating');
+tableHeaders.push('ctRating');
 tableHeaders.push('awpKillsPerRound');
 tableHeaders.push('cluthesPerRound');
 tableHeaders.push('dpr');
@@ -52,8 +54,57 @@ tableHeaders.push('entryFragsPerRound');
 tableHeaders.push('hsPercentage');
 tableHeaders.push('multiKillRounds');
 tableHeaders.push('supportRounds');
-tableHeaders.push('ctRating');
-tableHeaders.push('tRating');
+
+function normalizeHslRedYellowGreen(min, max, val, reverse) {
+    // green -> yellow -> red with hue is 120 -> 60 -> 0
+    // var saturation = Math.abs(val - 50)/50;   // fade to white as it approaches 50
+    var hue = Math.floor((val - min) / (max - min) * 120);
+    if (reverse) {
+        hue = 120 - hue;
+    }
+    // clamp to these color values
+    hue = Math.min(hue, 120);
+    hue = Math.max(hue, 0);
+    return "hsl(" + hue + ", 50%, 20%)";
+}
+
+var colorScaleFunctions = {
+    'cost': function(val) { return normalizeHslRedYellowGreen(180000, 230000, parseInt(val), true); },
+    'teamRank': function(val) { return normalizeHslRedYellowGreen(5, 30, parseInt(val), true); },
+    'rating': function(val) { return normalizeHslRedYellowGreen(0.8, 1.2, parseFloat(val)); },
+
+    'tRating': function(val) { return normalizeHslRedYellowGreen(0.8, 1.3, parseFloat(val)); },
+    
+    'ctRating': function(val) { return normalizeHslRedYellowGreen(0.9, 1.3, parseFloat(val)); },
+    
+    'r/$': function(val) { return normalizeHslRedYellowGreen(0.5, 0.6, parseFloat(val)); },
+    'awpKillsPerRound': function(val) { return normalizeHslRedYellowGreen(0.2, 0.35, parseFloat(val)); },
+    'cluthesPerRound': function(val) { return normalizeHslRedYellowGreen(0.8, 2.0, parseFloat(val)); },
+    'dpr': function(val) { return normalizeHslRedYellowGreen(0.6, 0.8, parseFloat(val)); },
+    'entryFragsPerRound': function(val) { return normalizeHslRedYellowGreen(8, 15, parseFloat(val)); },
+    'hsPercentage': function(val) { return normalizeHslRedYellowGreen(50, 60, parseFloat(val)); },
+    'multiKillRounds': function(val) { return normalizeHslRedYellowGreen(14, 20, parseFloat(val)); },
+    'supportRounds': function(val) { return normalizeHslRedYellowGreen(17, 25, parseFloat(val)); },
+
+    'playerLevel': function(val) {
+        if (val == 'GOLD') {
+            return 'hsl(30, 61%, 25%)';
+        } else if (val == 'SILVER') {
+            return 'hsl(0, 0%, 40%)';
+        } else {
+            return 'hsl(39, 26%, 22%)';
+        }
+    },
+    // 'awp': function(val) {
+    //     const min = 0.8;
+    //     const max = 1.2;
+    //     val = parseFloat(val);
+    //     var hue = Math.floor((val - min) / (max - min) * 120);
+    //     hue = Math.min(hue, 120);
+    //     hue = Math.max(hue, 0);
+    //     return "hsl(" + hue + ", 100%, 50%)";
+    // },
+}
 
 function toggleHideUnselectable() {
     unselectableHidden = !unselectableHidden;
@@ -68,7 +119,11 @@ function buildPlayerRow(name) {
     row.id = `_${name}`;
     forEach(tableHeaders, function(header) {
         let cell = document.createElement("td");
-        cell.innerHTML = playerData[name][header]; 
+        cell.innerHTML = playerData[name][header];
+        if (header in colorScaleFunctions) {
+            let hsl_css = colorScaleFunctions[header](cell.innerHTML);
+            cell.style.backgroundColor = hsl_css;
+        }
         row.appendChild(cell);
     });
     return row;
