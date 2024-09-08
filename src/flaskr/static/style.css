@@ -45,7 +45,7 @@ a {
     white-space: wrap;
 }
 
-.statsTable>th, .statsTable>td {
+.statsTable th, .statsTable td {
     max-width: 40px;
 }
 
