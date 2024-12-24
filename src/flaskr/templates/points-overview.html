@@ -57,10 +57,10 @@
             <th align="left">Placement</th>
             {% if data.points[event] %}
                 {% if data.points[event][1355207] %}
-                <td>{{ data.points[event][1355207].teamPlacementPercent |int }}%</td>
+                <td class="colorScaleCell">{{ data.points[event][1355207].teamPlacementPercent |int }}%</td>
                 {% endif %}
                 {% if data.points[event][1223636] %}
-                <td>{{ data.points[event][1223636].teamPlacementPercent |int }}%</td>
+                <td class="colorScaleCell">{{ data.points[event][1223636].teamPlacementPercent |int }}%</td>
                 {% endif %}
             {% endif %}
         </tr>
@@ -81,6 +81,19 @@
 
 <script>
 
+function normalizeHslRedYellowGreen(min, max, val, reverse) {
+    // green -> yellow -> red with hue is 120 -> 60 -> 0
+    // var saturation = Math.abs(val - 50)/50;   // fade to white as it approaches 50
+    var hue = Math.floor((val - min) / (max - min) * 120);
+    if (reverse) {
+        hue = 120 - hue;
+    }
+    // clamp to these color values
+    hue = Math.min(hue, 120);
+    hue = Math.max(hue, 0);
+    return "hsl(" + hue + ", 50%, 20%)";
+}
+
 function hideSeasonDetails(args) {
     let season = args.target.getAttribute('season');
     document.querySelectorAll('.seasonRow').forEach(function(seasonRow, idx) {
@@ -91,6 +104,12 @@ function hideSeasonDetails(args) {
 }
 
 window.addEventListener('load', async () => {
+    document.querySelectorAll('.colorScaleCell').forEach(function(cell, idx) {
+        let hsl_css = normalizeHslRedYellowGreen(0, 100, parseFloat(cell.innerHTML), true);
+        console.log(cell);
+        cell.style.backgroundColor = hsl_css;
+    });
+
     document.querySelectorAll('.seasonHeader').forEach(function(seasonRow, idx) {
         seasonRow.onclick = hideSeasonDetails;
         if (idx != 0) {
