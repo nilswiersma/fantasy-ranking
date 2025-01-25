@@ -37,6 +37,7 @@ def setup_scheduler():
     logger.info(f'scheduler started?')
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     setup_scheduler()
+    logger.critical('staying alive until enter')
     input()

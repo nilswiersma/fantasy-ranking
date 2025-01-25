@@ -15,8 +15,16 @@
     {% for season, season_data in data.events.items() |season_sort |reverse %}
         <tr>
             <th class="seasonHeader" season="{{ season }}" colspan="2" align="center">{{ season }}</th>
-            <th class="seasonHeader" season="{{ season }}" align="center">{{ data.totals[season][1355207] }}</th>
-            <th class="seasonHeader" season="{{ season }}" align="center">{{ data.totals[season][1223636] }}</th>
+            <th class="seasonHeader" season="{{ season }}" align="center">
+                {% if data.totals[season] %}
+                    {{ data.totals[season][1355207] }}
+                {% endif %}
+            </th>
+            <th class="seasonHeader" season="{{ season }}" align="center">
+                {% if data.totals[season] %}
+                    {{ data.totals[season][1223636] }}
+                {% endif %}
+            </th>
         </tr>
         {% for event, event_data in season_data.items() |sort |reverse %}
         <tr class="seasonRow" season="{{ season }}">

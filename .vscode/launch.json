@@ -4,15 +4,23 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
-    
     {
-      "name": "Debug file from workspacefolder",
+      "name": "backgroundupdate",
       "type": "debugpy",
       "request": "launch",
-      "program": "${file}",
+      "program": "src/hltv/background_update.py",
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}"
 
+    },
+    {
+      "name": "frontend",
+      "type": "debugpy",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "module": "flask",
+      "args": ["--app", "flaskr", "run", "--debug"]
     }
   ]
 }

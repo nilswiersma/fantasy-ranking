@@ -331,17 +331,22 @@ def df_from_hltv_season_stats(data, userId):
     
     data_flat = []
 
-    for game in data['frontpageData']['seasonLeaderboardData']['previousGames']:
-        row = extract_row(game)
-        data_flat.append(row)
+    if seasonLeaderboardData := data['frontpageData']['seasonLeaderboardData']:
+        for game in seasonLeaderboardData['previousGames']:
+            row = extract_row(game)
+            data_flat.append(row)
     
-    for game in data['frontpageData']['seasonLeaderboardData']['liveGames']:
-        row = extract_row(game)
-        data_flat.append(row)
+        for game in seasonLeaderboardData['liveGames']:
+            row = extract_row(game)
+            data_flat.append(row)
 
-    df = pd.DataFrame(data_flat)
-    df.set_index(['fantasyId', 'userId'], inplace=True)
-    return df
+    if data_flat:
+        df = pd.DataFrame(data_flat)
+        df.set_index(['fantasyId', 'userId'], inplace=True)
+        return df
+    else:
+        logger.warning(f'No season data (yet) for current season for {userId=}')
+        return None
 
 
 def get_draft_events(db_name):
@@ -369,16 +374,15 @@ def get_event_team_id(fantasy_id, user_id):
 
 def update_user_teams_current_season(db_name, user_id):
     user_teams = get_fantasy_teams_current_season(user_id)
-    df = df_from_hltv_season_stats(user_teams, user_id)
-            
-    create_fantasy_teams_table(db_name, df)
-    fantasy_ids = get_draft_events(db_name)
-    
-    for fantasy_id in fantasy_ids:
-        fantasy_id = fantasy_id[0]
-        team_id = get_event_team_id(fantasy_id, user_id)
+    if df := df_from_hltv_season_stats(user_teams, user_id):
+        create_fantasy_teams_table(db_name, df)
+        fantasy_ids = get_draft_events(db_name)
+        
+        for fantasy_id in fantasy_ids:
+            fantasy_id = fantasy_id[0]
+            team_id = get_event_team_id(fantasy_id, user_id)
 
-        if team_id != None:
-            df.loc[(fantasy_id, user_id), :] = [team_id] + [None] * (df.iloc[0].shape[0]-1)
+            if team_id != None:
+                df.loc[(fantasy_id, user_id), :] = [team_id] + [None] * (df.iloc[0].shape[0]-1)
 
-    df_update_in_sqlite_table(db_name, df, 'fantasy_teams')
+        df_update_in_sqlite_table(db_name, df, 'fantasy_teams')
