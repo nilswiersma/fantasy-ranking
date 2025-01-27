@@ -346,7 +346,7 @@ def df_from_hltv_season_stats(data, userId):
         return df
     else:
         logger.warning(f'No season data (yet) for current season for {userId=}')
-        return None
+        return pd.DataFrame()
 
 
 def get_draft_events(db_name):
@@ -374,7 +374,8 @@ def get_event_team_id(fantasy_id, user_id):
 
 def update_user_teams_current_season(db_name, user_id):
     user_teams = get_fantasy_teams_current_season(user_id)
-    if df := df_from_hltv_season_stats(user_teams, user_id):
+    df = df_from_hltv_season_stats(user_teams, user_id)
+    if not df.empty:
         create_fantasy_teams_table(db_name, df)
         fantasy_ids = get_draft_events(db_name)
         
