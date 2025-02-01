@@ -5,6 +5,16 @@ html {
     font-family: Open Sans, sans-serif;
     font-size: 12px;
     line-height: 1.66667;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px;
+}
+
+@media (max-width: 768px) {
+    body, html {
+        max-width: 100%;
+        padding: 5px;
+    }
 }
 
 table {
@@ -12,6 +22,7 @@ table {
     table-layout: fixed;
     box-shadow: 0 1px 1px 0 rgba(0, 0, 0, .5);
     background-color: #2d3844;
+    width: 100%;
 }
 
 tr {
@@ -26,7 +37,6 @@ td,
 th {
     white-space: nowrap;
     overflow: hidden;
-    /* text-overflow: ".."; */
     border-left: 1px solid #495867;
     border-right: 1px solid #495867;
     padding: 5px;
@@ -40,8 +50,6 @@ a {
 }
 
 #scoreBoard {
-    /* width: 100%; */
-    /* max-width: 975px; */
     white-space: wrap;
 }
 
@@ -54,11 +62,8 @@ a {
 }
 
 .playerUnselectable {
-    /* background-color: #080e14; */
     background-color: #2b3035;
-    /* color: #2b3035; */
     color: #565c5f;
-    /* color: #000000; */
 }
 
 .playerSelected {
@@ -67,11 +72,7 @@ a {
 }
 
 #playerTable, td {
-    /* max-width: none;
-    white-space: none;
-    overflow: none;
-    text-overflow: none;
-    min-width: 60px; */
+
 }
 
 table.sortable th:not(.sorttable_sorted):not(.sorttable_sorted_reverse):not(.sorttable_nosort):after { 
