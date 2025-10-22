@@ -7,7 +7,7 @@ import random
 import time
 import os
 
-from flask import escape
+from markupsafe import escape
 
 try:
     import colorlog as logging
