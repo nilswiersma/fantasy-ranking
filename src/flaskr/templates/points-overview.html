@@ -27,32 +27,23 @@
             </th>
         </tr>
         {% for event, event_data in season_data.items() |sort |reverse %}
-        <tr class="seasonRow" season="{{ season }}">
+        <tr class="seasonRow" season="{{ season }}" event="{{ event }}">
             <th rowspan="3">
                 <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/overview">
                     {{event_data.name}}
-                    <br/>
-                    <a target="_blank" rel="noopener noreferrer" href="{{ url_for('stats') }}?event={{ event }}">📈</a>
-
                 </a> 
+                <a target="_blank" rel="noopener noreferrer" href="{{ url_for('stats') }}?event={{ event }}">📈</a>
+
             </th>
-            <th align="left">Points</th>
+            <th align="left">Placement</th>
             {% if data.points[event] %}
                 {% if data.points[event][1355207] %}
-                {% set team = data.points[event][1355207] %}
-                <td><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/user/1355207/overview/gameredirect">
-                    {% set teamSum = team['teamTeamPoints'] + team['teamBoostPoints'] + team['teamPlayerPoints'] + team['teamRolePoints'] %}
-                    {{ teamSum |int }}
-                </a></td>
+                <td class="colorScaleCell">{{ data.points[event][1355207].teamPlacementPercent |int }}%</td>
                 {% else %}
                 <td rowspan="3"><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/leagues/join">JOIN NOW!</a></td>
                 {% endif %}
                 {% if data.points[event][1223636] %}
-                {% set team = data.points[event][1223636] %}
-                <td><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/user/1223636/overview/gameredirect">
-                    {% set teamSum = team['teamTeamPoints'] + team['teamBoostPoints'] + team['teamPlayerPoints'] + team['teamRolePoints'] %}
-                    {{ teamSum |int }}
-                </a></td>
+                <td class="colorScaleCell">{{ data.points[event][1223636].teamPlacementPercent |int }}%</td>
                 {% else %}
                 <td rowspan="3"><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/leagues/join">JOIN NOW!</a></td>
                 {% endif %}
@@ -61,25 +52,33 @@
                 <td rowspan="3"><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/leagues/join">JOIN NOW!</a></td>
             {% endif %}
         </tr>
-        <tr class="seasonRow" season="{{ season }}">
-            <th align="left">Placement</th>
+        <tr class="seasonRow" season="{{ season }}" event="{{ event }}">
+            <th class="eventDetailsCell" align="left" hidden>Points</th>
             {% if data.points[event] %}
                 {% if data.points[event][1355207] %}
-                <td class="colorScaleCell">{{ data.points[event][1355207].teamPlacementPercent |int }}%</td>
+                <td class="eventDetailsCell" hidden><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/user/1355207/overview/gameredirect">
+                    {% set team = data.points[event][1355207] %}
+                    {% set teamSum = team['teamTeamPoints'] + team['teamBoostPoints'] + team['teamPlayerPoints'] + team['teamRolePoints'] %}
+                    {{ teamSum |int }} ({{ team['teamTeamPoints'] |int }} + {{ team['teamBoostPoints'] |int }} + {{ team['teamPlayerPoints'] |int }} + {{ team['teamRolePoints'] |int }})
+                </a></td>                
                 {% endif %}
                 {% if data.points[event][1223636] %}
-                <td class="colorScaleCell">{{ data.points[event][1223636].teamPlacementPercent |int }}%</td>
+                <td class="eventDetailsCell" hidden><a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/user/1223636/overview/gameredirect">
+                    {% set team = data.points[event][1223636] %}
+                    {% set teamSum = team['teamTeamPoints'] + team['teamBoostPoints'] + team['teamPlayerPoints'] + team['teamRolePoints'] %}
+                    {{ teamSum |int }} ({{ team['teamTeamPoints'] |int }} + {{ team['teamBoostPoints'] |int }} + {{ team['teamPlayerPoints'] |int }} + {{ team['teamRolePoints'] |int }})
+                </a></td>
                 {% endif %}
             {% endif %}
         </tr>
-        <tr class="seasonRow" season="{{ season }}">
-            <th align="left">Season</th>
+        <tr class="seasonRow" season="{{ season }}" event="{{ event }}">
+            <th class="eventDetailsCell" align="left" hidden>Season</th>
             {% if data.points[event] %}
                 {% if data.points[event][1355207] %}
-                <td>{{ data.points[event][1355207].teamSeasonPoints |int }}</td>
+                <td class="eventDetailsCell" hidden>{{ data.points[event][1355207].teamSeasonPoints |int }}</td>
                 {% endif %}
                 {% if data.points[event][1223636] %}
-                <td>{{ data.points[event][1223636].teamSeasonPoints |int }}</td>
+                <td class="eventDetailsCell" hidden>{{ data.points[event][1223636].teamSeasonPoints |int }}</td>
                 {% endif %}
             {% endif %}
         </tr>
@@ -104,26 +103,36 @@ function normalizeHslRedYellowGreen(min, max, val, reverse) {
 
 function hideSeasonDetails(args) {
     let season = args.target.getAttribute('season');
-    document.querySelectorAll('.seasonRow').forEach(function(seasonRow, idx) {
-        if (seasonRow.getAttribute('season') == season) {
-            seasonRow.hidden = !seasonRow.hidden;
-        }
+    document.querySelectorAll(`.seasonRow[season="${season}"]`).forEach(function(seasonRow, idx) {
+        seasonRow.hidden = !seasonRow.hidden;
+    });
+}
+
+function hideEventDetails(args) {
+    let event = args.target.parentElement.getAttribute('event');
+    document.querySelectorAll(`[event="${event}"]`).forEach(function(seasonRow, idx) {
+        seasonRow.querySelectorAll('.eventDetailsCell').forEach(function(cell, idx) {
+            cell.hidden = !cell.hidden;
+        });
     });
 }
 
 window.addEventListener('load', async () => {
     document.querySelectorAll('.colorScaleCell').forEach(function(cell, idx) {
         let hsl_css = normalizeHslRedYellowGreen(0, 100, parseFloat(cell.innerHTML), true);
-        console.log(cell);
+        // console.log(cell);
         cell.style.backgroundColor = hsl_css;
     });
 
-    document.querySelectorAll('.seasonHeader').forEach(function(seasonRow, idx) {
-        seasonRow.onclick = hideSeasonDetails;
+    document.querySelectorAll('.seasonHeader').forEach(function(seasonHeader, idx) {
+        seasonHeader.onclick = hideSeasonDetails;
         if (idx != 0) {
-            console.log(seasonRow);
-            seasonRow.click();
+            seasonHeader.click();
         }
+    });
+
+    document.querySelectorAll('.seasonRow').forEach(function(seasonRow, idx) {
+        seasonRow.onclick = hideEventDetails;
     });
 }, false);
 </script>
