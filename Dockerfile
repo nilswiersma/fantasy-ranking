@@ -1,7 +1,7 @@
 FROM python:3-alpine
 
 # build tools
-RUN apk update && apk add python3-dev gcc libc-dev git tree
+RUN apk update && apk add python3-dev gcc libc-dev git tree build-base
 
 COPY . /fantasy-ranking/
 
