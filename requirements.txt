@@ -7,7 +7,6 @@ charset-normalizer==3.4.4
 click==8.3.0
 decorator==5.2.1
 executing==2.2.1
--e git+ssh://git@github.com/nilswiersma/fantasy-ranking.git@cd9265a6487b8e6327cf5810289a6ab7acda9986#egg=fantasy_ranking
 Flask==3.1.2
 idna==3.11
 ipython==9.6.0
