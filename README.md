@@ -19,6 +19,7 @@ docker run \
     --rm \
     -p 8081:8080 \
     --mount type=bind,source="$(pwd)"/data,target=/fantasy-ranking/data \
+    --name fantasy-ranking \
     fantasy-ranking
 ```
 
