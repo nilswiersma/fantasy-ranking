@@ -88,12 +88,11 @@ def get_hltv_league_stats(event_id):
 def get_stats_event_id(event_id):
     logger.debug(f'{HLTV_FANTASY_EVENT_OVERVIEW.format(event_id)=}')
     random_sleep()
-    print(HLTV_FANTASY_EVENT_OVERVIEW.format(event_id))
     resp = requests.get(HLTV_FANTASY_EVENT_OVERVIEW.format(event_id), headers=HEADER)
     if resp.status_code == 200:
         return resp.json()
     else:
-        raise Exception(f'{resp.status_code=} {resp.text=}')
+        raise Exception(f'{HLTV_FANTASY_EVENT_OVERVIEW.format(event_id)=} {resp.status_code=} {resp.text=}')
 
 def get_current_fantasy_overview():
     logger.debug(f'{HLTV_FANTASY_OVERVIEW=}')
@@ -102,7 +101,7 @@ def get_current_fantasy_overview():
     if resp.status_code == 200:
         return resp.json()
     else:
-        raise Exception(f'{resp.status_code=} {resp.text=}')
+        raise Exception(f'{HLTV_FANTASY_OVERVIEW=} {resp.status_code=} {resp.text=}')
 
 def get_single_team(fantasy_id, user_id):
     resp = safe_get(HLTV_FANTASY_LEAGUE_TEAM_REDIRECT.format(escape(fantasy_id), escape(user_id)))

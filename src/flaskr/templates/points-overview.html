@@ -29,10 +29,10 @@
         {% for event, event_data in season_data.items() |sort |reverse %}
         <tr class="seasonRow" season="{{ season }}" event="{{ event }}">
             <th rowspan="3">
+                <a target="_blank" rel="noopener noreferrer" href="{{ url_for('stats') }}?event={{ event }}">📈</a>
                 <a target="_blank" rel="noopener noreferrer" href="https://www.hltv.org/fantasy/{{ event }}/overview">
                     {{event_data.name}}
                 </a> 
-                <a target="_blank" rel="noopener noreferrer" href="{{ url_for('stats') }}?event={{ event }}">📈</a>
 
             </th>
             <th align="left">Placement</th>
