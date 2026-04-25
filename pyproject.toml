@@ -6,7 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "fantasy-ranking"
 requires-python = "==3.*"
 readme = "README.md"
-dynamic = ["dependencies", "version"]
+version = "0.0.1"
+dynamic = ["dependencies"]
 
 [tool.setuptools_scm]
 
