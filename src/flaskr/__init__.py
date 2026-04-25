@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, render_template, request, send_file
 from flask import current_app, g
+from werkzeug.middleware.proxy_fix import ProxyFix
 from hltv.helpers import *
 
 import os
@@ -13,7 +14,9 @@ def create_app():
         shutil.copy(DB_TEMPLATE, DB)
 
     app = Flask(__name__, instance_relative_config=True)
-    
+    # nginx terminates TLS and forwards X-Forwarded-{Proto,Host,For}; trust 1 hop.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
     try:
         os.makedirs(app.instance_path)
     except OSError:

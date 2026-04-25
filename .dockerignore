@@ -1,0 +1,16 @@
+.git
+.gitignore
+.venv
+.vscode
+__pycache__
+**/__pycache__
+*.pyc
+*.egg-info
+**/*.egg-info
+data
+test
+hltv-postmessage
+hltv-postmessage.zip
+README.md
+Dockerfile
+.dockerignore
